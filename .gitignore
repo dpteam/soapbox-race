@@ -23,8 +23,11 @@ www/
 #local h2 db
 /soapbox.mv.db
 /soapbox.trace.db
-.idea/
+/.idea/
 
 src/main/java/br/com/soapboxrace/tools/
 soapbox-race.iml
 BACKUP/
+
+soapbox.properties
+/openfire/
