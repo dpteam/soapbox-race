@@ -1,16 +1,21 @@
 package br.com.soapboxrace.http;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.zip.GZIPOutputStream;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import br.com.soapboxrace.definition.ServerExceptions;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -31,10 +36,12 @@ public class HttpSrv extends GzipHandler {
 		if ("/favicon.ico".equals(target)) {
 			return;
 		}
+		
 		System.out.println(baseRequest.toString());
 		String[] targetSplitted = target.split("/");
+//		System.out.println(Arrays.toString(targetSplitted));
 		String className = "Default";
-		String methodName = "";
+		String methodName;
 		String content = null;
 		if (targetSplitted.length > 4) {
 			className = targetSplitted[3];
@@ -44,6 +51,10 @@ public class HttpSrv extends GzipHandler {
 				methodName = targetSplitted[5];
 			}
 			methodName = String.valueOf(Character.toLowerCase(methodName.charAt(0))).concat(methodName.substring(1));
+		} else if (targetSplitted.length == 3) {
+			className = targetSplitted[1];
+			className = String.valueOf(Character.toUpperCase(className.charAt(0))).concat(className.substring(1));
+			methodName = "handle";
 		} else {
 			methodName = targetSplitted[3];
 			methodName = String.valueOf(Character.toLowerCase(methodName.charAt(0))).concat(methodName.substring(1));
@@ -53,10 +64,15 @@ public class HttpSrv extends GzipHandler {
 			Router newInstance = (Router) dynamicObj.newInstance();
 			newInstance.setBaseRequest(baseRequest);
 			newInstance.setRequest(request);
+			newInstance.setResponse(response);
 			newInstance.setTarget(target);
 			Method declaredMethod;
 			declaredMethod = dynamicObj.getDeclaredMethod(methodName);
 			content = (String) declaredMethod.invoke(newInstance);
+			
+//			System.out.printf("%s#%s returned: ", className, methodName);
+//			System.out.println(content);
+			
 			response.setStatus(200);
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | SecurityException e) {
 			e.printStackTrace();
@@ -69,7 +85,13 @@ public class HttpSrv extends GzipHandler {
 			EngineExceptionTrans error = new EngineExceptionTrans();
 			error.setDescription("");
 			error.setInnerException("");
-			error.setErrorCode(2);
+			
+			if (e.getCause() instanceof ServerExceptions.EngineException && ((ServerExceptions.EngineException) e.getCause()).getCode() != null) {
+				error.setErrorCode(((ServerExceptions.EngineException)e.getCause()).getCode().getCode());
+			} else {
+				error.setErrorCode(2);
+			}
+			
 			error.setMessage(e.getMessage());
 			error.setStackTrace("");
 			content = MarshalXML.marshal(error);
@@ -79,8 +101,13 @@ public class HttpSrv extends GzipHandler {
 			System.out.println("generic error");
 		}
 		try {
-			response.setContentType("application/xml;charset=utf-8");
-			response.setHeader("Content-Encoding", "gzip");
+			if (!target.endsWith(".jpg")) {
+				response.setContentType("application/xml;charset=utf-8");
+				response.setHeader("Content-Encoding", "gzip");
+			} else {
+				response.setContentType("image/jpg");
+			}
+			
 			if (target.contains("accept")) {
 				response.addHeader("Keep-Alive", "timeout=70");
 			} else {
@@ -101,15 +128,13 @@ public class HttpSrv extends GzipHandler {
 	private byte[] gzip(byte[] data) throws IOException {
 		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(data.length);
 		try {
-			OutputStream gzipout = new GZIPOutputStream(byteStream) {
+			try (OutputStream gzipout = new GZIPOutputStream(byteStream)
+			{
 				{
 					def.setLevel(1);
 				}
-			};
-			try {
+			}) {
 				gzipout.write(data);
-			} finally {
-				gzipout.close();
 			}
 		} finally {
 			byteStream.close();

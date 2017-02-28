@@ -17,10 +17,13 @@ public class RestApiCli {
 	}
 
 	public static void createUpdateUser(String user, String password) {
-		AuthenticationToken authenticationToken = new AuthenticationToken(openFireAuthToken);
-		RestApiClient restApiClient = new RestApiClient(Session.getXmppIp(), openFireRestPort, authenticationToken);
+		RestApiClient restApiClient = getClient();
 		UserEntity userEntity = new UserEntity(user, null, null, password);
 		restApiClient.createUser(userEntity);
+	}
+	
+	public static RestApiClient getClient() {
+		return new RestApiClient(Session.getXmppIp(), openFireRestPort, new AuthenticationToken(openFireAuthToken));
 	}
 
 	public static int getOpenFireRestPort() {

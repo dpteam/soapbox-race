@@ -19,7 +19,7 @@ linux:
 
 remove mechanisms tag:
 
-need to remove tag <mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl"> to work with soapbox.exe
+need to remove tag `<mechanisms xmlns="urn:ietf:params:xml:ns:xmpp-sasl">` to work with soapbox.exe
 
 - rename the file  SASLAuthentication.classx to  SASLAuthentication.class
 - go inside openfire.jar (with Winrar for example)

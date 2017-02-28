@@ -20,12 +20,14 @@ public class ConnectionDB {
 		threadLocal = new ThreadLocal<EntityManager>();
 	}
 
-	protected static EntityManager getManager() {
+	public static EntityManager getManager() {
 		EntityManager em = threadLocal.get();
 		if (em == null) {
 			em = emf.createEntityManager();
 			threadLocal.set(em);
 		}
+		
+//		em.clear();
 		return em;
 	}
 

@@ -35,7 +35,7 @@ public class SoapboxAPI extends Router {
 		}
 
 		APIPersonaDataType apiPersonaData = new APIPersonaDataType();
-		apiPersonaData.setBadges(null);
+		apiPersonaData.setBadges(personaEntity.getBadges());
 		apiPersonaData.setCars(cars);
 		apiPersonaData.setIconIndex(personaEntity.getIconIndex());
 		apiPersonaData.setLevel(personaEntity.getLevel());
@@ -45,6 +45,10 @@ public class SoapboxAPI extends Router {
 		apiPersonaData.setScore(personaEntity.getScore());
 
 		return MarshalXML.marshal(apiPersonaData);
+	}
+	
+	public String getAchievements() {
+		return "" + DaoFactory.getAchievementDao().getAll().size();
 	}
 
 	public String getEventData() {

@@ -15,9 +15,9 @@ public class XmppFactory {
 	}
 
 	private static IXmppSender newXmppSender(String xmppServerType) {
-		if ("OpenFire".equals(xmppServerType)) {
+		if ("OpenFire".equalsIgnoreCase(xmppServerType)) {
 			return new OpenFireSoapBoxCli();
-		} else if ("Offline".equals(xmppServerType)) {
+		} else if ("Offline".equalsIgnoreCase(xmppServerType)) {
 			return new XmppSrv();
 		}
 		return null;

@@ -1,0 +1,56 @@
+{
+   "ranks": [
+      {
+         "rank": 1,
+         "rewardType": "powerup",
+         "items": [
+            {
+               "id": "SRV-POWERUP9",
+               "count": 10,
+               "title": "NITROUS x10"
+            }
+         ]
+      },
+      {
+         "rank": 2,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-WINDOW5",
+               "count": 1,
+               "title": "YELLOW WINDOW TINT"
+            }
+         ]
+      },
+      {
+         "rank": 3,
+         "rewardType": "cardpack",
+         "items": []
+      },
+      {
+         "rank": 4,
+         "rewardType": "cash",
+         "items": [
+            {
+               "id": null,
+               "count": 1,
+               "title": "GM_CATALOG_00000190,1000000"
+            }
+         ]
+      },
+      {
+         "rank": 5,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-WHEEL237",
+               "count": 1,
+               "title": "19\" RACING HART WHEELS",
+               "random": {
+                  "chance": 0.25
+               }
+            }
+         ]
+      }
+   ]
+}

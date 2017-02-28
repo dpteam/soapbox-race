@@ -12,6 +12,8 @@ public interface ILobbyDao extends ISoapboxDao {
 
 	public List<LobbyEntity> findByEventStarted(Long eventId, Date dateNow, Date datePast);
 
+	public List<LobbyEntity> findByStarted(Date dateNow, Date datePast);
+	
 	public LobbyEntity save(LobbyEntity entity);
 
 }

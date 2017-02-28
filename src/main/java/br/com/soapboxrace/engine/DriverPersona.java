@@ -1,18 +1,22 @@
 package br.com.soapboxrace.engine;
 
-import java.util.List;
-
+import br.com.soapboxrace.achievements.AchievementQueue;
+import br.com.soapboxrace.achievements.AchievementUpdateInfo;
+import br.com.soapboxrace.achievements.AchievementUtils;
 import br.com.soapboxrace.bo.DriverPersonaBO;
+import br.com.soapboxrace.dao.factory.DaoFactory;
 import br.com.soapboxrace.definition.ServerExceptions;
 import br.com.soapboxrace.definition.ServerExceptions.PersonaIdMismatchException;
-import br.com.soapboxrace.jaxb.ArrayOfstringType;
-import br.com.soapboxrace.jaxb.PersonaIdArrayType;
-import br.com.soapboxrace.jaxb.PersonaIdsType;
-import br.com.soapboxrace.jaxb.PersonaMottoType;
-import br.com.soapboxrace.jaxb.PersonaPresenceType;
-import br.com.soapboxrace.jaxb.ProfileDataType;
+import br.com.soapboxrace.jaxb.*;
 import br.com.soapboxrace.jaxb.util.MarshalXML;
 import br.com.soapboxrace.jaxb.util.UnmarshalXML;
+import br.com.soapboxrace.jpa.PersonaEntity;
+import br.com.soapboxrace.utils.MiscUtils;
+import br.com.soapboxrace.utils.Pools;
+
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 public class DriverPersona extends Router {
 
@@ -26,6 +30,10 @@ public class DriverPersona extends Router {
 					&& Router.activeUsers.get(getUserId()).getSecurityToken().equals(getSecurityToken()))
 				return personaId;
 		throw new ServerExceptions.PersonaIdMismatchException(getLoggedPersonaId(), personaId);
+	}
+	
+	private Long getPlainPersonaId() {
+		return Long.valueOf(getParam("personaId"));
 	}
 	
 	private long getPersonaId() throws PersonaIdMismatchException {
@@ -96,8 +104,7 @@ public class DriverPersona extends Router {
 		stringBuilder.append("  <int>9403075</int>\n");
 		stringBuilder.append("  <int>9992125</int>\n");
 		stringBuilder.append("</ArrayOfint>");
-		String xmlTmp = stringBuilder.toString();
-		return xmlTmp;
+		return stringBuilder.toString();
 	}
 
 	public String reserveName() {
@@ -119,6 +126,39 @@ public class DriverPersona extends Router {
 	}
 
 	public String getPersonaInfo() throws PersonaIdMismatchException {
+		Long loggedPersonaId = getLoggedPersonaId();
+		PersonaEntity persona = DaoFactory.getPersonaDao().findById(loggedPersonaId);
+		
+        AchievementQueue.PersonaAchievementQueue queue = AchievementQueue.get(loggedPersonaId);
+        
+		if (queue.isDirty()) {
+            Pools.scheduler.schedule(() -> {
+                while (queue.isFree()) {
+//				    System.out.println("[queue-" + loggedPersonaId + "] waiting for queue to be locked");
+                    MiscUtils.noop();
+                }
+
+			    System.out.println("[queue-" + loggedPersonaId + "] queue is locked, proceeding");
+
+                Queue<AchievementUpdateInfo> updateInfoQueue = queue.getUpdateInfoQueue();
+
+                if (!updateInfoQueue.isEmpty()) {
+                    int index = 0;
+                    AchievementUpdateInfo updateInfo;
+
+                    while ((updateInfo = updateInfoQueue.poll()) != null) {
+                        System.out.println("[queue-" + loggedPersonaId + "] broadcasting update #" + (index + 1));
+                        AchievementUtils.broadcastProgress(persona, updateInfo.getPersonaAchievement(), updateInfo.getRanks(), updateInfo.getScore());
+
+                        index++;
+                    }
+                }
+
+                System.out.println("[queue-" + loggedPersonaId + "] all done, unlocking queue");
+                queue.unlock();
+            }, 1L, TimeUnit.SECONDS);
+        }
+		
 		ProfileDataType personaInfo = driverPersonaBO.getPersonaInfo(getPersonaId(true));
 		return MarshalXML.marshal(personaInfo);
 	}
@@ -143,7 +183,8 @@ public class DriverPersona extends Router {
 		return "<long>0</long>";
 	}
 
-	public String updateStatusMessage() {
+	public String updateStatusMessage() throws ServerExceptions.EngineException
+	{
 		String mottoXml = readInputStream();
 		PersonaMottoType personaMottoType = new PersonaMottoType();
 		personaMottoType = (PersonaMottoType) UnmarshalXML.unMarshal(mottoXml, personaMottoType);
@@ -152,11 +193,8 @@ public class DriverPersona extends Router {
 		return MarshalXML.marshal(driverPersonaBO.updateStatusMessage(personaId, message));
 	}
 
-	public String getPersonaPresenceByName() {
-		PersonaPresenceType personaPresenceType = driverPersonaBO.getPersonaPresenceByName(getParam("displayName"));
-		if (personaPresenceType != null) {
-			return MarshalXML.marshal(personaPresenceType);
-		}
-		return "";
+	public String getPersonaPresenceByName() throws ServerExceptions.EngineException
+	{
+		return MarshalXML.marshal(driverPersonaBO.getPersonaPresenceByName(getParam("displayName")));
 	}
 }

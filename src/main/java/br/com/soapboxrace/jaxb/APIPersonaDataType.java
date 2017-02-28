@@ -14,8 +14,9 @@ import javax.xml.bind.annotation.XmlType;
 		"otherPersonas" })
 @XmlRootElement(name = "PersonaData")
 public class APIPersonaDataType {
-	@XmlElement(name = "Badges", required = true, nillable = true)
-	private String badges;
+	@XmlElementWrapper(name = "Badges", required = true, nillable = true)
+	@XmlElement(name = "BadgePacket")
+	private List<BadgePacketType> badges;
 	@XmlElement(name = "IconIndex")
 	private Integer iconIndex;
 	@XmlElement(name = "Level")
@@ -32,11 +33,11 @@ public class APIPersonaDataType {
 	@XmlElementWrapper(name = "OtherPersonas", nillable = true)
 	private List<Long> otherPersonas;
 
-	public String getBadges() {
+	public List<BadgePacketType> getBadges() {
 		return badges;
 	}
 
-	public void setBadges(String badges) {
+	public void setBadges(List<BadgePacketType> badges) {
 		this.badges = badges;
 	}
 

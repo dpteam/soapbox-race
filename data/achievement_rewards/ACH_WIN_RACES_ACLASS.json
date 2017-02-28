@@ -1,0 +1,34 @@
+{
+   "ranks": [
+      {
+         "rank": 1,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-SKILL338",
+               "count": 1,
+               "title": "2-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.30
+               }
+            },
+            {
+               "id": "SRV-SKILL339",
+               "count": 1,
+               "title": "2-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.50
+               }
+            },
+            {
+               "id": "SRV-SKILL340",
+               "count": 1,
+               "title": "2-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            }
+         ]
+      }
+   ]
+}

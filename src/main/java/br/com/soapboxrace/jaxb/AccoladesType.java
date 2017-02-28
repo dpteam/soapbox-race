@@ -2,15 +2,12 @@ package br.com.soapboxrace.jaxb;
 
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "AccoladesType", propOrder = { "finalRewards", "hasLeveledUp", "luckyDrawInfo", "originalRewards",
 		"rewardInfo" })
+@XmlRootElement(name = "Accolades")
 public class AccoladesType {
 	@XmlElement(name = "FinalRewards", required = true)
 	protected FinalRewardsType finalRewards;

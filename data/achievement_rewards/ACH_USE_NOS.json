@@ -1,0 +1,110 @@
+{
+   "ranks": [
+      {
+         "rank": 1,
+         "rewardType": "skillmod",
+         "items": [
+            {
+               "id": "SRV-SKILL338",
+               "count": 1,
+               "title": "2-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.30
+               }
+            },
+            {
+               "id": "SRV-SKILL339",
+               "count": 1,
+               "title": "2-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.50
+               }
+            },
+            {
+               "id": "SRV-SKILL340",
+               "count": 1,
+               "title": "2-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            }
+         ]
+      },
+      {
+         "rank": 2,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-LOWKIT1",
+               "count": 1,
+               "title": "STAGE 1 LOWERING KIT"
+            }
+         ]
+      },
+      {
+         "rank": 3,
+         "rewardType": "cardpack",
+         "info": {
+            "numCards": 5,
+            "style": "silver"
+         }
+      },
+      {
+         "rank": 4,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-WINDOW10",
+               "count": 1,
+               "title": "SMOKE BLACKOUT WINDOW TINT"
+            }
+         ]
+      },
+      {
+         "rank": 5,
+         "rewardType": "skillmod",
+         "items": [
+            {
+               "id": "SRV-SKILL347",
+               "count": 1,
+               "title": "4-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            },
+            {
+               "id": "SRV-SKILL348",
+               "count": 1,
+               "title": "4-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            },
+            {
+               "id": "SRV-SKILL349",
+               "count": 1,
+               "title": "4-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            },
+            {
+               "id": "SRV-SKILL350",
+               "count": 1,
+               "title": "4-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            },
+            {
+               "id": "SRV-SKILL351",
+               "count": 1,
+               "title": "4-STAR SUPER SHOT SKILL MOD",
+               "random": {
+                  "chance": 0.20
+               }
+            }
+         ]
+      }
+   ]
+}

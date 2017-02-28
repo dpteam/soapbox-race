@@ -1,10 +1,7 @@
 package br.com.soapboxrace.jaxb;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
+import java.util.List;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "ProfileDataType", propOrder = { "badges", "boost", "cash", "iconIndex", "level", "motto", "name",
@@ -12,8 +9,9 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement(name = "ProfileData")
 public class ProfileDataType {
 
-	@XmlElement(name = "Badges")
-	protected String badges;
+	@XmlElementWrapper(name = "Badges")
+	@XmlElement(name = "BadgePacket")
+	protected List<BadgePacketType> badges;
 	@XmlElement(name = "Boost")
 	protected int boost;
 	@XmlElement(name = "Cash")
@@ -41,11 +39,11 @@ public class ProfileDataType {
 	@XmlElement(name = "Score")
 	protected float score;
 
-	public String getBadges() {
+	public List<BadgePacketType> getBadges() {
 		return badges;
 	}
 
-	public void setBadges(String badges) {
+	public void setBadges(List<BadgePacketType> badges) {
 		this.badges = badges;
 	}
 

@@ -1,0 +1,56 @@
+{
+   "ranks": [
+      {
+         "rank": 1,
+         "rewardType": "powerup",
+         "items": [
+            {
+               "id": "SRV-POWERUP5",
+               "count": 10,
+               "title": "READY x10"
+            }
+         ]
+      },
+      {
+         "rank": 2,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-WINDOW3",
+               "count": 1,
+               "title": "BLACK WINDOW TINT"
+            }
+         ]
+      },
+      {
+         "rank": 3,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-EPNEON10",
+               "count": 1,
+               "title": "SKYBLUE NEON"
+            }
+         ]
+      },
+      {
+         "rank": 4,
+         "rewardType": "cardpack",
+         "info": {
+            "numCards": 5,
+            "style": "skillpack"
+         }
+      },
+      {
+         "rank": 5,
+         "rewardType": "aftermarket",
+         "items": [
+            {
+               "id": "SRV-LICENSE12",
+               "count": 5,
+               "title": "\"CASH\" LICENSE PLATE x5"
+            }
+         ]
+      }
+   ]
+}

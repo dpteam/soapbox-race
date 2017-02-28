@@ -37,6 +37,12 @@ public class PersonaDao extends SoapboxDao implements IPersonaDao {
 		return false;
 	}
 
+	@Override
+	public List<PersonaEntity> getAll()
+	{
+		return null;
+	}
+
 	public PersonaEntity save(PersonaEntity entity) {
 		return (PersonaEntity) super.save(entity);
 	}

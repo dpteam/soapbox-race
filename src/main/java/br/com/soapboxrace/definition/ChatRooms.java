@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import br.com.soapboxrace.jaxb.ChatRoomType;
 
 @SuppressWarnings("unused")
-public final class ChatRooms {
+public final class ChatRooms
+{
 	private static ChatRoomType germanChat = new ChatRoomType(10, "TXT_CHAT_LANG_GERMAN", "DE");
 	private static ChatRoomType frenchChat = new ChatRoomType(10, "TXT_CHAT_LANG_FRENCH", "FR");
 	private static ChatRoomType englishChat = new ChatRoomType(10, "TXT_CHAT_LANG_ENGLISH", "EN");
@@ -18,7 +19,8 @@ public final class ChatRooms {
 	private static ChatRoomType generalChat = new ChatRoomType(10, "TXT_CHAT_LANG_GENERAL", "GN");
 	
 	public static List<ChatRoomType> getRooms() {
-		List<ChatRoomType> chatRooms = new ArrayList<ChatRoomType>();
+		List<ChatRoomType> chatRooms = new ArrayList<>();
+		
         for(Field f : ChatRooms.class.getDeclaredFields())
         {
             try {
@@ -26,9 +28,9 @@ public final class ChatRooms {
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				e.printStackTrace();
 				chatRooms.add(englishChat);
-				continue;
 			}
         }
+        
         return chatRooms;
 	}
 }

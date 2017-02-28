@@ -1,6 +1,8 @@
 package br.com.soapboxrace.xmpp.openfire;
 
+import br.com.soapboxrace.definition.ChatRooms;
 import br.com.soapboxrace.engine.Session;
+import br.com.soapboxrace.jaxb.ChatRoomType;
 
 public class HandShake {
 
@@ -30,7 +32,22 @@ public class HandShake {
 		openFireTalk.read();
 		openFireTalk.write("<presence><show>chat</show><status>Online</status><priority>0</priority></presence>");
 		openFireTalk.write(" ");
-		openFireTalk.write("<presence to='channel.EN__1@conference." + xmppIp + "/nfsw.engine.engine'/>");
+		
+		for (ChatRoomType chatRoom : ChatRooms.getRooms()) {
+			for (int i = 0; i < chatRoom.getChannelCount(); i++) {
+				String presenceMsg = String.format(
+						"<presence to='channel.%s__%d@conference.%s/EA-Chat'/>",
+						chatRoom.getShortName(),
+						i + 1,
+						xmppIp
+				);
+				
+				openFireTalk.write(presenceMsg);
+			}
+		}
+		
+//		openFireTalk.write("<presence to='channel.EN__1@conference." + xmppIp + "/EA-Chat'/>");
+//		openFireTalk.write("<presence to='channel.EN__2@conference." + xmppIp + "/EA-Chat'/>");
 		openFireTalk.startReader();
 	}
 

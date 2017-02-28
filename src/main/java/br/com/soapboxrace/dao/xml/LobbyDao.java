@@ -18,6 +18,12 @@ public class LobbyDao extends SoapboxDao implements ILobbyDao {
 		return null;
 	}
 
+	@Override
+	public List<LobbyEntity> findByStarted(Date dateNow, Date datePast)
+	{
+		return null;
+	}
+
 	public LobbyEntity save(LobbyEntity entity) {
 		entity = (LobbyEntity) super.save(entity);
 		return entity;

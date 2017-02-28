@@ -4,19 +4,20 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.List;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "InventoryItemsType", propOrder = { "inventoryItemTrans" })
 public class InventoryItemsType {
 
 	@XmlElement(name = "InventoryItemTrans", required = true)
-	protected InventoryItemTransType inventoryItemTrans;
+	protected List<InventoryItemTransType> inventoryItemTrans;
 
-	public InventoryItemTransType getInventoryItemTrans() {
+	public List<InventoryItemTransType> getInventoryItemTrans() {
 		return inventoryItemTrans;
 	}
 
-	public void setInventoryItemTrans(InventoryItemTransType value) {
+	public void setInventoryItemTrans(List<InventoryItemTransType> value) {
 		this.inventoryItemTrans = value;
 	}
 

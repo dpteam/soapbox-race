@@ -1,5 +1,7 @@
 package br.com.soapboxrace.definition;
 
+import java.util.Objects;
+
 public enum EventFinishReasons {
 	Unknown(0, "FINISHREASON_Unknown"),
 	Completed(2, "FINISHREASON_Completed"),
@@ -40,7 +42,7 @@ public enum EventFinishReasons {
 
 	public static EventFinishReasons forId(Integer finishReasonId) {
 		for (EventFinishReasons e : EventFinishReasons.values()) {
-			if (e.getEventFinishReasonId() == finishReasonId) {
+			if (Objects.equals(e.getEventFinishReasonId(), finishReasonId)) {
 				return e;
 			}
 		}
@@ -48,7 +50,7 @@ public enum EventFinishReasons {
 	}
 	public static String getDataFromId(Integer finishReasonId) {
 		for (EventFinishReasons e : EventFinishReasons.values()) {
-			if (e.getEventFinishReasonId() == finishReasonId) {
+			if (Objects.equals(e.getEventFinishReasonId(), finishReasonId)) {
 				return e.getEventFinishReasonData();
 			}
 		}

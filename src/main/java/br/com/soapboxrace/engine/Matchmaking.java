@@ -1,13 +1,12 @@
 package br.com.soapboxrace.engine;
 
-import br.com.soapboxrace.bo.MatchmakingBO;
+import br.com.soapboxrace.bo.legacy.LegacyMatchmakingBO;
 import br.com.soapboxrace.jaxb.LobbyInfoType;
-import br.com.soapboxrace.jaxb.SessionInfoType;
 import br.com.soapboxrace.jaxb.util.MarshalXML;
 
 public class Matchmaking extends Router {
 
-	MatchmakingBO matchmakingBO = new MatchmakingBO();
+	LegacyMatchmakingBO matchmakingBO = new LegacyMatchmakingBO();
 
 	private Long getEventId() {
 		String[] split = getTarget().split("/");
@@ -19,8 +18,7 @@ public class Matchmaking extends Router {
 	public String launchevent() {
 		if (getLoggedPersonaId() == -1L)
 			return "";
-		SessionInfoType launchevent = matchmakingBO.launchevent(getLoggedPersonaId(), getEventId());
-		return MarshalXML.marshal(launchevent);
+		return MarshalXML.marshal(matchmakingBO.launchevent(getLoggedPersonaId(), getEventId()));
 	}
 
 	public String leavelobby() {
@@ -41,6 +39,7 @@ public class Matchmaking extends Router {
 	}
 
 	public String joinqueueracenow() {
+		matchmakingBO.joinqueueracenow(getLoggedPersonaId());
 		return "";
 	}
 

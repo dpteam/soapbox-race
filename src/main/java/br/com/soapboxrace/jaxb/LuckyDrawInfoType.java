@@ -71,6 +71,11 @@ public class LuckyDrawInfoType {
 		this.luckyDrawItem = dummyList;
 	}
 
+	public void setLuckyDrawItem(List<LuckyDrawItemType> luckyDrawItem)
+	{
+		this.luckyDrawItem = luckyDrawItem;
+	}
+
 	public Integer getNumBoxAnimations() {
 		return numBoxAnimations;
 	}

@@ -71,7 +71,7 @@ public class EventDefinitionEntity implements ISoapBoxEntity {
 	@XmlElement(name = "Laps")
 	protected int laps;
 	@XmlElement(name = "Length")
-	protected int length;
+	protected float length;
 	@XmlElement(name = "MaxClassRating")
 	protected int maxClassRating;
 	@XmlElement(name = "MaxEntrants")
@@ -215,11 +215,11 @@ public class EventDefinitionEntity implements ISoapBoxEntity {
 		this.laps = value;
 	}
 
-	public int getLength() {
+	public float getLength() {
 		return length;
 	}
 
-	public void setLength(int value) {
+	public void setLength(float value) {
 		this.length = value;
 	}
 

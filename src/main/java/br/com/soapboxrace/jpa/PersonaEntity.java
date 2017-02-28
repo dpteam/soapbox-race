@@ -1,18 +1,13 @@
 package br.com.soapboxrace.jpa;
 
+import br.com.soapboxrace.Data;
+import br.com.soapboxrace.jaxb.BadgePacketType;
+import br.com.soapboxrace.jaxb.convert.BadgesConverter;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 
@@ -68,6 +63,10 @@ public class PersonaEntity implements ISoapBoxEntity {
 	@ManyToOne
 	@JoinColumn(name = "USERID", referencedColumnName = "ID")
 	private UserEntity user;
+	
+	@Column(name = "BADGES")
+	@Convert(converter = BadgesConverter.class)
+	private List<BadgePacketType> badges;
 
 	public void setId(Long id) {
 		this.id = id;
@@ -91,6 +90,16 @@ public class PersonaEntity implements ISoapBoxEntity {
 
 	public Integer getIconIndex() {
 		return this.iconIndex;
+	}
+
+	public List<BadgePacketType> getBadges()
+	{
+		return badges;
+	}
+
+	public void setBadges(List<BadgePacketType> badges)
+	{
+		this.badges = badges;
 	}
 
 	public void setLevel(Integer level) {
@@ -186,5 +195,9 @@ public class PersonaEntity implements ISoapBoxEntity {
 			ownedCarlist = new ArrayList<OwnedCarEntity>();
 		}
 		return ownedCarlist.add(e);
+	}
+	
+	public int getRepToPass() {
+		return Data.getRequiredRep(level, Float.valueOf(repAtCurrentLevel).intValue());
 	}
 }

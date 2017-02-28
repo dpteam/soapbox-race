@@ -1,7 +1,11 @@
 package br.com.soapboxrace.engine;
 
+import br.com.soapboxrace.http.HttpSessionVO;
 import br.com.soapboxrace.jaxb.ChatServerType;
 import br.com.soapboxrace.jaxb.util.MarshalXML;
+import br.com.soapboxrace.xmpp.XmppFactory;
+import br.com.soapboxrace.xmpp.XmppMessage;
+
 import static br.com.soapboxrace.definition.ChatRooms.getRooms;
 
 public class Session extends Router {
@@ -20,7 +24,7 @@ public class Session extends Router {
 
 	private static String xmppServerType = "OpenFire";
 
-	private static long currentMpSessionId = 10000L;
+	private static long currentMpSessionId = 1L;
 
 	public String getChatInfo() {
 		ChatServerType chatServer = new ChatServerType();
@@ -28,6 +32,21 @@ public class Session extends Router {
 		chatServer.setIp(xmppIp);
 		chatServer.setPort(xmppPort);
 		return MarshalXML.marshal(chatServer);
+	}
+	
+	public String sendChatAnnouncement() {
+		String message = getParam("message");
+		
+		for (HttpSessionVO session : Router.activeUsers.values()) {
+			Long personaId = session.getPersonaId();
+			
+			if (personaId != -1L) {
+				XmppFactory.getXmppSenderInstance(Session.getXmppServerType())
+						.send(XmppMessage.createSystemMessage(message), personaId);
+			}
+		}
+		
+		return "";
 	}
 
 	public static String getXmppIp() {
@@ -39,6 +58,13 @@ public class Session extends Router {
 	}
 
 	public static long getNextMpSessionId() {
+		if (currentMpSessionId == 1) {
+			long original = currentMpSessionId;
+			currentMpSessionId++;
+			
+			return original;
+		}
+		
 		return currentMpSessionId++;
 	}
 

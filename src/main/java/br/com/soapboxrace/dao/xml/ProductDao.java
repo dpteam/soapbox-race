@@ -31,4 +31,16 @@ public class ProductDao extends SoapboxDao implements IProductDao {
 
 		return arrayOfProductTrans.getProductTransList().get(0);
 	}
+
+	@Override
+	public ProductEntity findByHash(Long hash)
+	{
+		throw new UnsupportedOperationException("Not yet implemented.");
+	}
+
+	@Override
+	public ProductEntity selectRandom(String productType)
+	{
+		return null;
+	}
 }

@@ -1,15 +1,57 @@
 package br.com.soapboxrace.engine;
 
+import br.com.soapboxrace.achievements.AchievementUtils;
+import br.com.soapboxrace.dao.factory.DaoFactory;
+import br.com.soapboxrace.dao.factory.IAchievementDao;
+import br.com.soapboxrace.dao.factory.IPersonaAchievementDao;
+import br.com.soapboxrace.dao.factory.IPersonaDao;
+import br.com.soapboxrace.definition.PresetExceptions;
+import br.com.soapboxrace.definition.ServerExceptions;
+import br.com.soapboxrace.jaxb.announcements.LoginAnnouncementContext;
+import br.com.soapboxrace.jaxb.announcements.LoginAnnouncementDefinitionType;
+import br.com.soapboxrace.jaxb.announcements.LoginAnnouncementType;
+import br.com.soapboxrace.jaxb.announcements.LoginAnnouncementsDefinitionType;
+import br.com.soapboxrace.jaxb.util.MarshalXML;
+import br.com.soapboxrace.jpa.PersonaEntity;
+import br.com.soapboxrace.xmpp.IXmppSender;
+import br.com.soapboxrace.xmpp.XmppFactory;
+import br.com.soapboxrace.xmpp.openfire.RestApiCli;
+import org.igniterealtime.restclient.entity.GroupEntity;
+
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 
 public class Default extends Router {
 
 	public String getfriendlistfromuserid() {
-		return "<PersonaFriendsList/>";
+		return "<PersonaFriendsList>" +
+				"<friendPersona>" +
+				"<FriendPersona>" +
+				"<iconIndex>25</iconIndex>" +
+				"<level>60</level>" +
+				"<name>DEVNilzao</name>" +
+				"<originalName>Nilzao</originalName>" +
+				"<personaId>100</personaId>" +
+				"<presence>1</presence>" +
+				"<socialNetwork>nilzao_thinker</socialNetwork>" +
+				"<userId>1</userId>" +
+				"</FriendPersona>" +
+				"</friendPersona>" +
+				"</PersonaFriendsList>";
 	}
 
 	public String systeminfo() {
+		String xmppIp = Session.getXmppIp();
+		
+//		String announcementBlock = String
+//				.format("&lt;response status='1' ticket='0'&gt;&lt;ChatBroadcast&gt;&lt;ChatBlob&gt;&lt;FromName&gt;System&lt;/FromName&gt;"
+//						+ "&lt;FromPersonaId&gt;0&lt;/FromPersonaId&gt;&lt;FromUserId&gt;0&lt;/FromUserId&gt;&lt;Message&gt;%s"
+//						+ "&lt;/Message&gt;&lt;ToId&gt;0&lt;/ToId&gt;&lt;Type&gt;2&lt;/Type&gt;&lt;/ChatBlob&gt;&lt;/ChatBroadcast&gt;&lt;/response&gt;", 
+//						"Hello there!");
+//
+//		XmppFactory.getXmppSenderInstance(Session.getXmppServerType()).send(announcementBlock, 102L);
+		
 		String timeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSS+00:00").format(new Date());
 		timeString = timeString.replace(" ", "T");
 		StringBuilder stringBuilder = new StringBuilder();
@@ -112,7 +154,19 @@ public class Default extends Router {
 	}
 
 	public String loginAnnouncements() {
-		return "<LoginAnnouncementsDefinition/>";
+		LoginAnnouncementsDefinitionType loginAnnouncementsDefinition = new LoginAnnouncementsDefinitionType();
+		loginAnnouncementsDefinition.setImagesPath("http://192.168.6.2:1337/announcements");
+
+		LoginAnnouncementDefinitionType announcement = new LoginAnnouncementDefinitionType();
+		announcement.setContext(LoginAnnouncementContext.NotApplicable);
+		announcement.setId(1337);
+		announcement.setImageChecksum(-1);
+		announcement.setImageUrl("snap.jpg");
+		announcement.setType(LoginAnnouncementType.ImageOnly);
+		
+		loginAnnouncementsDefinition.setAnnouncements(Collections.singletonList(announcement));
+		
+		return MarshalXML.marshal(loginAnnouncementsDefinition);
 	}
 
 	public String getsocialsettings() {
@@ -139,13 +193,13 @@ public class Default extends Router {
 		stringBuilder.append("  <MinRaceNowLevel>2</MinRaceNowLevel>\n");
 		stringBuilder.append("  <VoipAvailable>false</VoipAvailable>\n");
 		stringBuilder.append("  <activatedHolidaySceneryGroups>\n");
-		stringBuilder.append("    <string>SCENERY_GROUP_CHRISTMAS</string>\n");
+		stringBuilder.append("    <string>SCENERY_GROUP_NEWYEARS</string>\n");
 		stringBuilder.append("  </activatedHolidaySceneryGroups>\n");
 		stringBuilder.append("  <activeHolidayIds>\n");
-		stringBuilder.append("    <long>0</long>\n");
+		stringBuilder.append("    <long>5</long>\n");
 		stringBuilder.append("  </activeHolidayIds>\n");
 		stringBuilder.append("  <disactivatedHolidaySceneryGroups>\n");
-		stringBuilder.append("    <string>SCENERY_GROUP_CHRISTMAS_DISABLE</string>\n");
+		stringBuilder.append("    <string>SCENERY_GROUP_NEWYEARS_DISABLE</string>\n");
 		stringBuilder.append("  </disactivatedHolidaySceneryGroups>\n");
 		stringBuilder.append("  <firstTimeLogin>false</firstTimeLogin>\n");
 		stringBuilder.append("  <maxLevel>60</maxLevel>\n");
@@ -180,8 +234,30 @@ public class Default extends Router {
 		return "";
 	}
 
-	public String addfriendrequest() {
+	public String addfriendrequest()
+	{
 		return "";
 	}
 
+	public String achievementtrigger() {
+	    Long personaId = Long.valueOf(getParam("personaId"));
+        IAchievementDao achievementDao = DaoFactory.getAchievementDao();
+        IPersonaAchievementDao personaAchievementDao = DaoFactory.getPersonaAchievementDao();
+        IPersonaDao personaDao = DaoFactory.getPersonaDao();
+        IXmppSender xmppSender = XmppFactory.getXmppSenderInstance(Session.getXmppServerType());
+
+        PersonaEntity personaEntity = personaDao.findById(personaId);
+        
+        if (personaEntity == null)
+            return "Not found";
+        
+        personaAchievementDao.update(
+                personaEntity,
+                achievementDao.findByIdentifier("achievement_ACH_USE_NOS"),
+                245L,
+                updateInfo -> AchievementUtils.broadcastProgress(personaEntity, updateInfo.getPersonaAchievement(), updateInfo.getRanks(), updateInfo.getScore())
+        );
+        
+		return "";
+	}
 }

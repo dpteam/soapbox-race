@@ -6,67 +6,72 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
-public class XmppTalk {
+public class XmppTalk
+{
+    private Socket socket;
+    private BufferedReader reader;
+    private BufferedWriter writer;
+    private int personaId;
 
-	private Socket socket;
-	private BufferedReader reader;
-	private BufferedWriter writer;
-	private int personaId;
+    public XmppTalk(Socket socket)
+    {
+        this.socket = socket;
+        setReaderWriter();
+    }
 
-	public XmppTalk(Socket socket) {
-		this.socket = socket;
-		setReaderWriter();
-	}
+    public void setSocket(Socket socket)
+    {
+        this.socket = socket;
+        setReaderWriter();
+    }
 
-	public void setSocket(Socket socket) {
-		this.socket = socket;
-		setReaderWriter();
-	}
+    public Socket getSocket()
+    {
+        return this.socket;
+    }
 
-	public Socket getSocket() {
-		return socket;
-	}
+    private void setReaderWriter()
+    {
+        try {
+            this.reader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+            this.writer = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-	private void setReaderWriter() {
-		try {
-			reader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-			writer = new BufferedWriter(new OutputStreamWriter(this.socket.getOutputStream()));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+    public String read()
+    {
+        String msg = null;
+        char[] buffer = new char[' '];
+        int charsRead = 0;
+        try {
+            if ((charsRead = this.reader.read(buffer)) != -1) {
+                msg = new String(buffer).substring(0, charsRead);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return msg;
+    }
 
-	public String read() {
-		String msg = null;
-		char[] buffer = new char[8192];
-		int charsRead = 0;
-		try {
-			if ((charsRead = reader.read(buffer)) != -1) {
-				msg = new String(buffer).substring(0, charsRead);
-				System.out.println("C->S [" + msg + "]");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return msg;
-	}
+    public void write(String msg)
+    {
+        try {
+            this.writer.write(msg);
+            this.writer.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-	public void write(String msg) {
-		try {
-			System.out.println("S->C [" + msg + "]");
-			writer.write(msg);
-			writer.flush();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+    public int getPersonaId()
+    {
+        return this.personaId;
+    }
 
-	public int getPersonaId() {
-		return personaId;
-	}
-
-	public void setPersonaId(int personaId) {
-		this.personaId = personaId;
-	}
-
+    public void setPersonaId(int personaId)
+    {
+        this.personaId = personaId;
+    }
 }

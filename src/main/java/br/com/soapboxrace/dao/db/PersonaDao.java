@@ -1,10 +1,5 @@
 package br.com.soapboxrace.dao.db;
 
-import java.util.List;
-
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-
 import br.com.soapboxrace.dao.factory.DaoFactory;
 import br.com.soapboxrace.dao.factory.ILobbyEntrantDao;
 import br.com.soapboxrace.dao.factory.IPersonaDao;
@@ -12,6 +7,10 @@ import br.com.soapboxrace.db.SoapboxDao;
 import br.com.soapboxrace.jpa.ISoapBoxEntity;
 import br.com.soapboxrace.jpa.PersonaEntity;
 import br.com.soapboxrace.jpa.UserEntity;
+
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
+import java.util.List;
 
 public class PersonaDao extends SoapboxDao implements IPersonaDao {
 
@@ -29,6 +28,17 @@ public class PersonaDao extends SoapboxDao implements IPersonaDao {
 			return true;
 		}
 		return false;
+	}
+
+	@Override
+	public List<PersonaEntity> getAll()
+	{
+		TypedQuery<PersonaEntity> query = getManager().createQuery(
+				"SELECT obj FROM PersonaEntity obj",
+				PersonaEntity.class
+		);
+
+		return query.getResultList();
 	}
 
 	public PersonaEntity save(PersonaEntity entity) {

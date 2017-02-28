@@ -10,4 +10,8 @@ public interface IProductDao extends ISoapboxDao {
 	public List<ProductEntity> findByCategoryNameClientProductType(String categoryName, String clientProductType);
 
 	public ProductEntity findByProductId(String productId);
+	
+	public ProductEntity findByHash(Long hash);
+	
+	public ProductEntity selectRandom(String productType);
 }

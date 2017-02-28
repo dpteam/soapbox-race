@@ -8,6 +8,7 @@ import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.server.Request;
 
@@ -20,6 +21,7 @@ public class Router {
 	public static SecureRandom random = new SecureRandom();
 	private String target;
 	private HttpServletRequest request;
+	private HttpServletResponse response;
 	private Request baseRequest;
 
 	// CRT function converted to Java.
@@ -145,8 +147,18 @@ public class Router {
 		return request;
 	}
 
+	protected HttpServletResponse getResponse()
+	{
+		return response;
+	}
+
 	public void setRequest(HttpServletRequest request) {
 		this.request = request;
+	}
+
+	public void setResponse(HttpServletResponse response)
+	{
+		this.response = response;
 	}
 
 	protected String getSecureRandomText() {

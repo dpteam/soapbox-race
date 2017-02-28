@@ -1,7 +1,7 @@
 package br.com.soapboxrace.definition;
 
 public interface ServerExceptions {	
-	public class PersonaIdMismatchException extends Exception {
+	class PersonaIdMismatchException extends Exception {
 		private static final long serialVersionUID = 1L;
 
 		public PersonaIdMismatchException (Long expected, Long result) {
@@ -9,11 +9,30 @@ public interface ServerExceptions {
 	    }
 	}
 	
-	public class EngineException extends Exception {
+	class EngineException extends Exception {
 		private static final long serialVersionUID = 1L;
 
-		public EngineException (String errorCode) {
-			super(errorCode);
+		private EngineExceptionCode code;
+		
+		public EngineException (String message) {
+			super(message);
+		}
+
+		public EngineException(String message, EngineExceptionCode code)
+		{
+			this(message);
+			
+			this.code = code;
+		}
+
+		public EngineException(EngineExceptionCode code)
+		{
+			this.code = code;
+		}
+
+		public EngineExceptionCode getCode()
+		{
+			return code;
 		}
 	}
 }

@@ -1,5 +1,6 @@
 package br.com.soapboxrace.dao.xml;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import br.com.soapboxrace.dao.factory.IBasketDefinitionDao;
@@ -22,5 +23,11 @@ public class BasketDefinitionDao extends SoapboxDao implements IBasketDefinition
 			return (BasketDefinitionEntity) baskets.get(0);
 		}
 		return null;
+	}
+
+	@Override
+	public List<BasketDefinitionEntity> getAll()
+	{
+		return new ArrayList<>();
 	}
 }

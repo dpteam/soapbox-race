@@ -1,9 +1,10 @@
-package br.com.soapboxrace.bo;
+package br.com.soapboxrace.bo.legacy;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import br.com.soapboxrace.dao.factory.DaoFactory;
 import br.com.soapboxrace.dao.factory.IEventDataDao;
@@ -30,7 +31,8 @@ import br.com.soapboxrace.xmpp.jaxb.XMPP_LobbyInviteType;
 import br.com.soapboxrace.xmpp.jaxb.XMPP_LobbyLaunchedType;
 import br.com.soapboxrace.xmpp.jaxb.XMPP_P2PCryptoTicketType;
 
-public class MatchmakingBO {
+public class LegacyMatchmakingBO
+{
 
 	private ILobbyDao lobbyDao = DaoFactory.getLobbyDao();
 	private IPersonaDao personaDao = DaoFactory.getPersonaDao();
@@ -58,7 +60,7 @@ public class MatchmakingBO {
 	}
 
 	public static void main(String[] args) {
-		MatchmakingBO matchmakingBO = new MatchmakingBO();
+		LegacyMatchmakingBO matchmakingBO = new LegacyMatchmakingBO();
 		matchmakingBO.joinqueueevent(103L, 47L);
 	}
 
@@ -68,9 +70,20 @@ public class MatchmakingBO {
 		Date past = new Date(now.getTime() - 35000);
 		List<LobbyEntity> lobbys = lobbyDao.findByEventStarted(eventId, now, past);
 
-		if (lobbys.size() == 0) {
+		if (lobbys.isEmpty()) {
 			createLobby(personaEntity, eventId);
 		} else {
+			joinLobby(personaEntity, lobbys);
+		}
+	}
+	
+	public void joinqueueracenow(Long personaId) {
+		PersonaEntity personaEntity = personaDao.findById(personaId);
+		Date now = new Date();
+		Date past = new Date(now.getTime() - 35000);
+		List<LobbyEntity> lobbys = lobbyDao.findByStarted(now, past);
+
+		if (!lobbys.isEmpty()) {
 			joinLobby(personaEntity, lobbys);
 		}
 	}
@@ -118,7 +131,7 @@ public class MatchmakingBO {
 	private boolean isPersonaInside(Long personaId, List<LobbyEntrantEntity> lobbyEntrants) {
 		for (LobbyEntrantEntity lobbyEntrantEntity : lobbyEntrants) {
 			Long entrantPersonaId = lobbyEntrantEntity.getPersona().getId();
-			if (entrantPersonaId == personaId) {
+			if (Objects.equals(entrantPersonaId, personaId)) {
 				return true;
 			}
 		}
@@ -127,7 +140,7 @@ public class MatchmakingBO {
 
 	private void sendJoinMsg(Long personaId, List<LobbyEntrantEntity> lobbyEntrants) {
 		for (LobbyEntrantEntity lobbyEntrantEntity : lobbyEntrants) {
-			if (personaId != lobbyEntrantEntity.getPersona().getId()) {
+			if (!Objects.equals(personaId, lobbyEntrantEntity.getPersona().getId())) {
 				lobbyEntrantEntity.setHeat(1);
 				lobbyEntrantEntity.setLevel(lobbyEntrantEntity.getPersona().getLevel());
 				lobbyEntrantEntity.setLobbyId(lobbyEntrantEntity.getLobby().getId());

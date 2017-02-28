@@ -21,4 +21,16 @@ public class EventDefinitionDao extends SoapboxDao implements IEventDefinitionDa
 		return eventsPacketType.getEvents().getEventDefinitionList();
 	}
 
+	@Override
+	public EventDefinitionEntity findByHash(Long hash)
+	{
+		return null;
+	}
+
+	@Override
+	public EventDefinitionEntity findByTrack(String track)
+	{
+		return null;
+	}
+
 }

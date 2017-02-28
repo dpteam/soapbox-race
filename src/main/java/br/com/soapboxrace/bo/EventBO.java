@@ -1,30 +1,32 @@
 package br.com.soapboxrace.bo;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import br.com.soapboxrace.dao.factory.DaoFactory;
-import br.com.soapboxrace.dao.factory.IEventDataDao;
-import br.com.soapboxrace.dao.factory.IOwnedCarDao;
-import br.com.soapboxrace.dao.factory.IPersonaDao;
+import br.com.soapboxrace.achievements.AchievementQueue;
+import br.com.soapboxrace.bo.legacy.LegacyPersonaBO;
+import br.com.soapboxrace.dao.factory.*;
+import br.com.soapboxrace.definition.CarClasses;
 import br.com.soapboxrace.definition.CardDecks;
-import br.com.soapboxrace.definition.EventModes;
+import br.com.soapboxrace.definition.EventMode;
 import br.com.soapboxrace.engine.Router;
 import br.com.soapboxrace.engine.Session;
 import br.com.soapboxrace.http.HttpSessionVO;
-import br.com.soapboxrace.jaxb.AccoladesType;
-import br.com.soapboxrace.jaxb.FinalRewardsType;
-import br.com.soapboxrace.jaxb.LuckyDrawInfoType;
-import br.com.soapboxrace.jaxb.LuckyDrawItemType;
-import br.com.soapboxrace.jaxb.PursuitEventResultType;
-import br.com.soapboxrace.jaxb.RouteArbitrationPacketType;
-import br.com.soapboxrace.jaxb.RouteEntrantResultType;
-import br.com.soapboxrace.jaxb.RouteEventResultType;
-import br.com.soapboxrace.jaxb.TeamEscapeArbitrationPacketType;
-import br.com.soapboxrace.jaxb.TeamEscapeEntrantResultType;
-import br.com.soapboxrace.jaxb.TeamEscapeEventResultType;
-import br.com.soapboxrace.jaxb.util.UnmarshalXML;
+import br.com.soapboxrace.jaxb.events.*;
+import br.com.soapboxrace.jaxb.events.entrants.DragEntrantResult;
+import br.com.soapboxrace.jaxb.events.entrants.RouteEntrantResult;
+import br.com.soapboxrace.jaxb.events.packets.DragArbitrationPacket;
+import br.com.soapboxrace.jaxb.events.packets.PursuitArbitrationPacket;
+import br.com.soapboxrace.jaxb.events.packets.RouteArbitrationPacket;
+import br.com.soapboxrace.jaxb.events.packets.TeamEscapeArbitrationPacket;
+import br.com.soapboxrace.jaxb.events.results.DragEventResult;
+import br.com.soapboxrace.jaxb.events.results.PursuitEventResult;
+import br.com.soapboxrace.jaxb.events.results.RouteEventResult;
+import br.com.soapboxrace.jaxb.events.results.TeamEscapeEventResult;
+import br.com.soapboxrace.jaxb.events.rewards.Accolades;
+import br.com.soapboxrace.jaxb.events.rewards.Reward;
+import br.com.soapboxrace.jaxb.events.rewards.RewardPart;
+import br.com.soapboxrace.jaxb.events.rewards.lucky.LuckyDrawInfo;
+import br.com.soapboxrace.jaxb.events.rewards.lucky.LuckyDrawItem;
 import br.com.soapboxrace.jpa.EventDataEntity;
+import br.com.soapboxrace.jpa.EventDefinitionEntity;
 import br.com.soapboxrace.jpa.OwnedCarEntity;
 import br.com.soapboxrace.jpa.PersonaEntity;
 import br.com.soapboxrace.xmpp.IXmppSender;
@@ -32,262 +34,696 @@ import br.com.soapboxrace.xmpp.XmppFactory;
 import br.com.soapboxrace.xmpp.jaxb.XMPP_EventTimingOutType;
 import br.com.soapboxrace.xmpp.jaxb.XMPP_ResponseTypeEventTimingOut;
 import br.com.soapboxrace.xmpp.jaxb.XMPP_ResponseTypeRouteEntrantResult;
-import br.com.soapboxrace.xmpp.jaxb.XMPP_ResponseTypeTeamEscapeEntrantResult;
 import br.com.soapboxrace.xmpp.jaxb.XMPP_RouteEntrantResultType;
-import br.com.soapboxrace.xmpp.jaxb.XMPP_TeamEscapeEntrantResultType;
+import org.apache.commons.lang3.tuple.Pair;
 
-public class EventBO {
+import java.util.ArrayList;
+import java.util.List;
 
-	private IPersonaDao personaDao = DaoFactory.getPersonaDao();
-	private IOwnedCarDao ownedCarDao = DaoFactory.getOwnedCarDao();
-	private IEventDataDao eventDataDao = DaoFactory.getEventDataDao();
+/**
+ * Re-written event BO to handle:
+ * <p>
+ * - arbitration (all types)
+ * - pursuit bust
+ * - rewards
+ *
+ * @author leorblx
+ */
+public class EventBO
+{
+    /* DAO declarations */
+    private final IPersonaDao personaDao = DaoFactory.getPersonaDao();
+    private final IOwnedCarDao ownedCarDao = DaoFactory.getOwnedCarDao();
+    private final IEventDataDao eventDataDao = DaoFactory.getEventDataDao();
+    private final IPersonaAchievementDao personaAchievementDao = DaoFactory.getPersonaAchievementDao();
+    private final IAchievementDao achievementDao = DaoFactory.getAchievementDao();
 
-	public String launched(Long userId, Long eventSessionId) {
-		// Router.getHttpSessionVo(userId).getAlternateEventTimer().start();
-		Long personaId = Router.getHttpSessionVo(userId).getPersonaId();
-		EventDataEntity eventDataEntity = eventDataDao.findByEventSessionIdAndPersonaId(eventSessionId, personaId);
-		eventDataEntity.setEventDurationInMS(0L);
-		eventDataEntity.setEventLaunched(true);
-		eventDataEntity.setFinishReason(0);
-		eventDataEntity.setRank((short) 0);
-		eventDataEntity.setTopSpeed(0F);
-		eventDataDao.save(eventDataEntity);
-		return "";
-	}
+    /* BO declarations */
+    private final LegacyPersonaBO personaBO = new LegacyPersonaBO();
 
-	// TODO: add instancedaccolades() for team escape
-	// TODO: add drag, pursuit specific entries to MySQL
-	// TODO: add other event results
-	// TODO: actually drop items
-	// TODO: add drop rates
-	// TODO: manage FinishReason
+    /**
+     * Insert initial event session data into the database.
+     * Called when the game requests "/event/launched".
+     *
+     * @param userId         The current user's ID.
+     * @param eventSessionId The ID of the event session.
+     * @return An empty string.
+     */
+    public String launched(Long userId, Long eventSessionId)
+    {
+        HttpSessionVO session = Router.getHttpSessionVo(userId);
 
-	// TODO: maybe add custom arbitration functions:
-	// -> would make everything easier to read and understand
-	// -> would make it easier to add drop rates
-	// -> would make it easier to calculate exp,cash&drops
-	// -> would make it easier to manage MySQL
-	// -> ex: routeArbitration, teamEscapeArbitration, pursuitArbitration
-	public Object arbitration(Long userId, String arbitrationXml) {
-		HttpSessionVO httpSessionVo = Router.getHttpSessionVo(userId);
-		Long eventSessionId = httpSessionVo.getEventSessionId();
-		Long personaId = httpSessionVo.getPersonaId();
+        if (session == null) {
+            throw new IllegalArgumentException("No session for user " + userId + "!");
+        }
 
-		EventDataEntity eventDataEntity = eventDataDao.findByEventSessionIdAndPersonaId(eventSessionId, personaId);
-		if (!eventDataEntity.getEventLaunched())
-			return null;
+        session.getAlternateEventTimer().start();
+        Long personaId = session.getPersonaId();
+        
+        /* Find the entry in the database. */
+        EventDataEntity eventData = eventDataDao.findByEventSessionIdAndPersonaId(
+                eventSessionId, personaId
+        );
 
-		// Long alternateEventDurationInMilliseconds =
-		// httpSessionVo.getAlternateEventTimer().getElapsed();
+        eventData.setEventDurationInMS(0L);
+        eventData.setEventLaunched(true);
+        eventData.setFinishReason(0);
+        eventData.setRank((short) 0);
+        eventData.setTopSpeed(0F);
+        
+        /* Save the data */
+        eventDataDao.save(eventData);
 
-		PersonaEntity personaEntity = personaDao.findById(personaId);
-		Integer level = personaEntity.getLevel();
-		if (level == 1) {
-			personaEntity.setLevel(2);
-			personaDao.save(personaEntity);
-		}
+        return "";
+    }
 
-		OwnedCarEntity currentCar = personaEntity.getOwnedCarlist().get(personaEntity.getCurCarIndex());
-		Short newCarDurability = 0;
-		if (currentCar.getDurability() > 0) {
-			newCarDurability = (short) (currentCar.getDurability() - 5);
-			currentCar.setDurability(newCarDurability);
-			ownedCarDao.save(currentCar);
-		}
+    /**
+     * Generate an arbitration result that can be marshalled to XML.
+     *
+     * @param userId The ID of the user that made the request
+     * @param packet The arbitration packet sent by the client.
+     * @return The arbitration result.
+     */
+    public AbstractEventResult arbitration(Long userId, AbstractArbitrationPacket packet)
+    {
+        HttpSessionVO session = Router.getHttpSessionVo(userId);
 
-		FinalRewardsType finalRewardsType = new FinalRewardsType();
-		finalRewardsType.setRep(7331);
-		finalRewardsType.setTokens(1337);
+        if (session == null) {
+            throw new IllegalArgumentException("No session for user " + userId + "!");
+        }
 
-		LuckyDrawItemType luckyDrawItem = new LuckyDrawItemType();
-		luckyDrawItem.setDescription("TEST DROP");
-		luckyDrawItem.setHash(-1681514783L);
-		luckyDrawItem.setIcon("product_nos_x1");
-		luckyDrawItem.setRemainingUseCount(0);
-		luckyDrawItem.setResellPrice(7331);
-		luckyDrawItem.setVirtualItem("nosshot");
-		luckyDrawItem.setVirtualItemType("POWERUP");
-		luckyDrawItem.setWasSold(true);
+        Long sessionId = session.getEventSessionId();
+        Long personaId = session.getPersonaId();
+        PersonaEntity persona = personaDao.findById(personaId);
+        EventDataEntity eventData = eventDataDao.findByEventSessionIdAndPersonaId(sessionId, personaId);
 
-		LuckyDrawInfoType luckyDrawInfo = new LuckyDrawInfoType();
-		luckyDrawInfo.setLuckyDrawItem(luckyDrawItem);
+        if (eventData == null || !eventData.getEventLaunched())
+            return null;
 
-		AccoladesType accolades = new AccoladesType();
-		accolades.setFinalRewards(finalRewardsType);
-		accolades.setLuckyDrawInfo(luckyDrawInfo);
+        packet.setPersona(persona);
+        packet.setEventSessionId(sessionId);
 
-		Integer eventModeId = eventDataEntity.getEventDefinition().getEventModeId();
-		switch (EventModes.forId(eventModeId)) {
-		case Drag:
-			break;
-		// case MeetingPlace:
-		case Pursuit_MP:
-			TeamEscapeArbitrationPacketType teamEscapeArbitrationPacket = (TeamEscapeArbitrationPacketType) UnmarshalXML.unMarshal(arbitrationXml,
-					new TeamEscapeArbitrationPacketType());
-			TeamEscapeEventResultType teamEscapeEventResult = new TeamEscapeEventResultType();
+        Long duration = session.getAlternateEventTimer().getElapsed();
 
-			teamEscapeEventResult.setAccolades(null);
-			teamEscapeEventResult.setDurability(newCarDurability);
-			teamEscapeEventResult.setEventId(eventDataEntity.getEventId());
-			teamEscapeEventResult.setEventSessionId(eventSessionId);
+        EventMode mode = EventMode.forId(eventData.getEventDefinition().getEventModeId());
 
-			XMPP_TeamEscapeEntrantResultType xmppTeamEscapeResult = new XMPP_TeamEscapeEntrantResultType();
-			xmppTeamEscapeResult.setDistanceToFinish(teamEscapeArbitrationPacket.getDistanceToFinish());
-			xmppTeamEscapeResult.setEventDurationInMilliseconds(teamEscapeArbitrationPacket.getEventDurationInMilliseconds());
-			xmppTeamEscapeResult.setEventSessionId(eventSessionId);
-			xmppTeamEscapeResult.setFinishReason(teamEscapeArbitrationPacket.getFinishReason());
-			xmppTeamEscapeResult.setFractionCompleted(teamEscapeArbitrationPacket.getFractionCompleted());
-			xmppTeamEscapeResult.setPersonaId(personaId);
-			xmppTeamEscapeResult.setRanking(teamEscapeArbitrationPacket.getRank());
+        if (mode == null)
+            throw new IllegalArgumentException("Invalid mode: " + eventData.getEventDefinition().getEventModeId());
 
-			XMPP_ResponseTypeTeamEscapeEntrantResult teamEscapeEntrantResultResponse = new XMPP_ResponseTypeTeamEscapeEntrantResult();
-			teamEscapeEntrantResultResponse.setTeamEscapeEntrantResult(xmppTeamEscapeResult);
+        if (packet instanceof ArbitrationPacketWithJumps) {
+            personaAchievementDao.update(
+                    persona,
+                    achievementDao.findByIdentifier("achievement_ACH_CLOCKED_AIRTIME"),
+                    ((ArbitrationPacketWithJumps) packet).getSumOfJumpsDurationInMilliseconds(),
+                    updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+            );
+        }
 
-			Boolean teamEscapeIsFirstPlace = teamEscapeArbitrationPacket.getRank() == 1;
+        EventDefinitionEntity eventDefinition = eventData.getEventDefinition();
 
-			eventDataEntity.setBustedCount(teamEscapeArbitrationPacket.getBustedCount());
-			eventDataEntity.setCarId(teamEscapeArbitrationPacket.getCarId());
-			eventDataEntity.setCopsDeployed(teamEscapeArbitrationPacket.getCopsDeployed());
-			eventDataEntity.setCopsDisabled(teamEscapeArbitrationPacket.getCopsDisabled());
-			eventDataEntity.setCopsRammed(teamEscapeArbitrationPacket.getCopsRammed());
-			eventDataEntity.setCostToState(teamEscapeArbitrationPacket.getCostToState());
-			eventDataEntity.setDistanceToFinish(teamEscapeArbitrationPacket.getDistanceToFinish());
-			eventDataEntity.setEventDurationInMS(teamEscapeArbitrationPacket.getEventDurationInMilliseconds());
-			eventDataEntity.setEventModeId(eventModeId);
-			eventDataEntity.setFinishReason(teamEscapeArbitrationPacket.getFinishReason());
-			eventDataEntity.setFractionCompleted(teamEscapeArbitrationPacket.getFractionCompleted());
-			eventDataEntity.setInfractions(teamEscapeArbitrationPacket.getInfractions());
-			eventDataEntity.setPerfectStart(teamEscapeArbitrationPacket.getPerfectStart());
-			eventDataEntity.setRank(teamEscapeArbitrationPacket.getRank());
-			eventDataEntity.setRoadBlocksDodged(teamEscapeArbitrationPacket.getRoadBlocksDodged());
-			eventDataEntity.setSpikeStripsDodged(teamEscapeArbitrationPacket.getSpikeStripsDodged());
-			eventDataEntity.setTopSpeed(teamEscapeArbitrationPacket.getTopSpeed());
-			eventDataDao.save(eventDataEntity);
+        if (eventDefinition.getLength() > 0) {
+            personaAchievementDao.update(
+                    persona,
+                    achievementDao.findByIdentifier("achievement_ACH_DRIVE_MILES"),
+                    Float.valueOf(eventDefinition.getLength() * 1609.344f).longValue(),
+                    updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+            );
+        }
 
-			List<TeamEscapeEntrantResultType> teamEscapeEntrants = new ArrayList<TeamEscapeEntrantResultType>();
-			for (EventDataEntity racer : eventDataDao.getRacers(eventSessionId)) {
-				TeamEscapeEntrantResultType teamEscapeEntrantResult = new TeamEscapeEntrantResultType();
-				teamEscapeEntrantResult.setDistanceToFinish(racer.getDistanceToFinish());
-				teamEscapeEntrantResult.setEventDurationInMilliseconds(racer.getEventDurationInMS());
-				teamEscapeEntrantResult.setEventSessionId(eventSessionId);
-				teamEscapeEntrantResult.setFinishReason(racer.getFinishReason());
-				teamEscapeEntrantResult.setFractionCompleted(racer.getFractionCompleted());
-				teamEscapeEntrantResult.setPersonaId(racer.getPersonaId());
-				teamEscapeEntrantResult.setRanking(racer.getRank());
-				teamEscapeEntrants.add(teamEscapeEntrantResult);
+        Accolades accolades = createAccolades(eventData, mode, packet);
+        AbstractEventResult eventResult = null;
 
-				if (racer.getPersonaId() != personaId) {
-					IXmppSender xmppSenderInstance = XmppFactory.getXmppSenderInstance(Session.getXmppServerType());
-					xmppSenderInstance.send(teamEscapeEntrantResultResponse, racer.getPersonaId());
-					if (teamEscapeIsFirstPlace) {
-						XMPP_EventTimingOutType eventTimingOut = new XMPP_EventTimingOutType();
-						eventTimingOut.setEventSessionId(eventSessionId);
-						XMPP_ResponseTypeEventTimingOut eventTimingOutResponse = new XMPP_ResponseTypeEventTimingOut();
-						eventTimingOutResponse.setEventTimingOut(eventTimingOut);
+        AchievementQueue.get(personaId).unlock();
 
-						xmppSenderInstance.send(eventTimingOutResponse, racer.getPersonaId());
-					}
-				}
-			}
-			teamEscapeEventResult.setEntrants(teamEscapeEntrants);
+        switch (mode) {
+            case Circuit:
+            case Sprint:
+                eventResult = routeArbitration(
+                        eventData,
+                        personaDao.findById(personaId),
+                        accolades,
+                        (RouteArbitrationPacket) packet
+                );
+                break;
+            case Drag:
+                eventResult = dragArbitration(
+                        eventData,
+                        personaDao.findById(personaId),
+                        accolades,
+                        (DragArbitrationPacket) packet
+                );
+                break;
+            case MeetingPlace:
+                break;
+            case Pursuit_MP:
+                eventResult = teamEscapeArbitration(
+                        eventData,
+                        personaDao.findById(personaId),
+                        accolades,
+                        (TeamEscapeArbitrationPacket) packet
+                );
+                break;
+            case Pursuit_SP:
+                eventResult = pursuitArbitration(
+                        eventData,
+                        personaDao.findById(personaId),
+                        accolades,
+                        (PursuitArbitrationPacket) packet
+                );
+                break;
+            default:
+                break;
+        }
 
-			return teamEscapeEventResult;
-		case Pursuit_SP:
-			break;
-		case Circuit:
-		case Sprint:
-			RouteArbitrationPacketType routeArbitrationPacket = (RouteArbitrationPacketType) UnmarshalXML.unMarshal(arbitrationXml,
-					new RouteArbitrationPacketType());
-			RouteEventResultType routeEventResult = new RouteEventResultType();
+        AchievementQueue.get(personaId).lock();
 
-			luckyDrawInfo.setCardDeck(CardDecks.forRank(routeArbitrationPacket.getRank()));
+        return eventResult;
+    }
 
-			routeEventResult.setAccolades(accolades);
-			routeEventResult.setDurability(newCarDurability);
-			routeEventResult.setEventId(eventDataEntity.getEventId());
-			routeEventResult.setEventSessionId(eventSessionId);
+    /**
+     * Creates a drag arbitration result.
+     *
+     * @param eventData         The event data entity.
+     * @param persona           The persona entity.
+     * @param accolades         The accolades instance (holds rewards)
+     * @param arbitrationPacket The arbitration packet sent by the client.
+     * @return The event result
+     */
+    private DragEventResult dragArbitration(
+            EventDataEntity eventData,
+            PersonaEntity persona,
+            Accolades accolades,
+            DragArbitrationPacket arbitrationPacket
+    )
+    {
+        Long eventSessionId = eventData.getEventSessionId();
+        DragEventResult result = new DragEventResult();
+        List<DragEntrantResult> dragEntrants = new ArrayList<>();
 
-			XMPP_RouteEntrantResultType xmppRouteResult = new XMPP_RouteEntrantResultType();
-			xmppRouteResult.setBestLapDurationInMilliseconds(routeArbitrationPacket.getBestLapDurationInMilliseconds());
-			xmppRouteResult.setEventDurationInMilliseconds(routeArbitrationPacket.getEventDurationInMilliseconds());
-			xmppRouteResult.setEventSessionId(eventSessionId);
-			xmppRouteResult.setFinishReason(routeArbitrationPacket.getFinishReason());
-			xmppRouteResult.setPersonaId(personaId);
-			xmppRouteResult.setRanking(routeArbitrationPacket.getRank());
-			xmppRouteResult.setTopSpeed(routeArbitrationPacket.getTopSpeed());
+        for (EventDataEntity racer : eventDataDao.getRacers(eventSessionId)) {
+            DragEntrantResult entrant = new DragEntrantResult();
+            entrant.setTopSpeed(racer.getTopSpeed());
+            entrant.setEventDurationInMilliseconds(racer.getEventDurationInMS());
+            entrant.setEventSessionId(eventSessionId);
+            entrant.setFinishReason(racer.getFinishReason());
+            entrant.setPersonaId(racer.getPersonaId());
+            entrant.setRanking(racer.getRank());
 
-			XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
-			routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
+            dragEntrants.add(entrant);
+        }
 
-			Boolean routeIsFirstPlace = routeArbitrationPacket.getRank() == 1;
+        result.setEntrants(dragEntrants);
+        result.setPersonaId(persona.getId());
+        result.setEventSessionId(eventSessionId);
+        result.setAccolades(accolades);
+        result.setDurability(100);
+        result.setEventId(eventData.getEventId());
+        result.setExitPath(ExitPath.ExitToFreeroam);
+        result.setInviteLifetimeInMilliseconds(0);
 
-			eventDataEntity.setBestLapTimeInMS(routeArbitrationPacket.getBestLapDurationInMilliseconds());
-			eventDataEntity.setCarId(routeArbitrationPacket.getCarId());
-			eventDataEntity.setEventDurationInMS(routeArbitrationPacket.getEventDurationInMilliseconds());
-			eventDataEntity.setEventModeId(eventModeId);
-			eventDataEntity.setFinishReason(routeArbitrationPacket.getFinishReason());
-			eventDataEntity.setPerfectStart(routeArbitrationPacket.getPerfectStart());
-			eventDataEntity.setRank(routeArbitrationPacket.getRank());
-			eventDataEntity.setTopSpeed(routeArbitrationPacket.getTopSpeed());
-			eventDataDao.save(eventDataEntity);
+        eventData.setCarId(arbitrationPacket.getCarId());
+        eventData.setEventDurationInMS(arbitrationPacket.getEventDurationInMilliseconds());
+        eventData.setFinishReason(arbitrationPacket.getFinishReason());
+        eventData.setPerfectStart(arbitrationPacket.getPerfectStart());
+        eventData.setRank(arbitrationPacket.getRank());
+        eventData.setTopSpeed(arbitrationPacket.getTopSpeed());
+        eventData.setFractionCompleted(arbitrationPacket.getFractionCompleted());
 
-			List<RouteEntrantResultType> routeEntrants = new ArrayList<RouteEntrantResultType>();
-			for (EventDataEntity racer : eventDataDao.getRacers(eventSessionId)) {
-				RouteEntrantResultType routeEntrantResult = new RouteEntrantResultType();
-				routeEntrantResult.setBestLapDurationInMilliseconds(racer.getBestLapTimeInMS());
-				routeEntrantResult.setEventDurationInMilliseconds(racer.getEventDurationInMS());
-				routeEntrantResult.setEventSessionId(eventSessionId);
-				routeEntrantResult.setFinishReason(racer.getFinishReason());
-				routeEntrantResult.setPersonaId(racer.getPersonaId());
-				routeEntrantResult.setRanking(racer.getRank());
-				routeEntrantResult.setTopSpeed(racer.getTopSpeed());
-				routeEntrants.add(routeEntrantResult);
+        eventDataDao.save(eventData);
 
-				if (racer.getPersonaId() != personaId) {
-					IXmppSender xmppSenderInstance = XmppFactory.getXmppSenderInstance(Session.getXmppServerType());
-					xmppSenderInstance.send(routeEntrantResultResponse, racer.getPersonaId());
-					if (routeIsFirstPlace) {
-						XMPP_EventTimingOutType eventTimingOut = new XMPP_EventTimingOutType();
-						eventTimingOut.setEventSessionId(eventSessionId);
-						XMPP_ResponseTypeEventTimingOut eventTimingOutResponse = new XMPP_ResponseTypeEventTimingOut();
-						eventTimingOutResponse.setEventTimingOut(eventTimingOut);
+        if (arbitrationPacket.getRank() == 1) {
+            personaAchievementDao.update(
+                    persona,
+                    achievementDao.findByIdentifier("achievement_ACH_WIN_DRAG"),
+                    1L,
+                    updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+            );
+        }
 
-						xmppSenderInstance.send(eventTimingOutResponse, racer.getPersonaId());
-					}
-				}
-			}
-			routeEventResult.setEntrants(routeEntrants);
+        return result;
+    }
 
-			return routeEventResult;
-		default:
-			break;
-		}
-		return bust(personaId); // fake data
-	}
+    /**
+     * Creates a route arbitration result.
+     * Applicable to sprints and circuits.
+     *
+     * @param eventData         The event data entity.
+     * @param persona           The persona entity.
+     * @param accolades         The accolades instance (holds rewards)
+     * @param arbitrationPacket The pursuit arbitration packet sent by the client.
+     * @return The event result
+     */
+    private RouteEventResult routeArbitration(
+            EventDataEntity eventData,
+            PersonaEntity persona,
+            Accolades accolades,
+            RouteArbitrationPacket arbitrationPacket
+    )
+    {
+        Long eventSessionId = eventData.getEventSessionId();
+        RouteEventResult result = new RouteEventResult();
 
-	public PursuitEventResultType bust(Long personaId) {
-		PursuitEventResultType pursuitEventResult = new PursuitEventResultType();
-		pursuitEventResult.setDurability(100);
-		pursuitEventResult.setEventId(1);
-		pursuitEventResult.setEventSessionId(1000000000);
-		pursuitEventResult.setExitPath("ExitToFreeroam");
-		pursuitEventResult.setInviteLifetimeInMilliseconds(0);
-		pursuitEventResult.setLobbyInviteId(0);
-		pursuitEventResult.setPersonaId(personaId);
-		pursuitEventResult.setHeat(1);
+//        System.out.println("packet = " + arbitrationPacket);
 
-		FinalRewardsType finalRewardsType = new FinalRewardsType();
-		finalRewardsType.setRep(0);
-		finalRewardsType.setTokens(0);
+        result.setAccolades(accolades);
+        result.setDurability(100);
+        result.setEventId(eventData.getEventId());
+        result.setEventSessionId(eventSessionId);
 
-		AccoladesType accoladesType = new AccoladesType();
-		accoladesType.setHasLeveledUp(false);
-		accoladesType.setLuckyDrawInfo(null);
-		accoladesType.setRewardInfo(null);
-		accoladesType.setFinalRewards(finalRewardsType);
+        // Stats/XMPP
+        XMPP_RouteEntrantResultType xmppRouteResult = new XMPP_RouteEntrantResultType();
+        xmppRouteResult.setBestLapDurationInMilliseconds(arbitrationPacket.getBestLapDurationInMilliseconds());
+        xmppRouteResult.setEventDurationInMilliseconds(arbitrationPacket.getEventDurationInMilliseconds());
+        xmppRouteResult.setEventSessionId(eventSessionId);
+        xmppRouteResult.setFinishReason(arbitrationPacket.getFinishReason());
+        xmppRouteResult.setPersonaId(persona.getId());
+        xmppRouteResult.setRanking(arbitrationPacket.getRank());
+        xmppRouteResult.setTopSpeed(arbitrationPacket.getTopSpeed());
 
-		pursuitEventResult.setAccolades(accoladesType);
-		return pursuitEventResult;
-	}
+        XMPP_ResponseTypeRouteEntrantResult routeEntrantResultResponse = new XMPP_ResponseTypeRouteEntrantResult();
+        routeEntrantResultResponse.setRouteEntrantResult(xmppRouteResult);
 
+        // Saving data
+        boolean routeIsFirstPlace = arbitrationPacket.getRank() == 1;
+
+        eventData.setBestLapTimeInMS(arbitrationPacket.getBestLapDurationInMilliseconds());
+        eventData.setCarId(arbitrationPacket.getCarId());
+        eventData.setEventDurationInMS(arbitrationPacket.getEventDurationInMilliseconds());
+        eventData.setEventModeId(eventData.getEventDefinition().getEventModeId());
+        eventData.setFinishReason(arbitrationPacket.getFinishReason());
+        eventData.setPerfectStart(arbitrationPacket.getPerfectStart());
+        eventData.setRank(arbitrationPacket.getRank());
+        eventData.setTopSpeed(arbitrationPacket.getTopSpeed());
+
+        eventDataDao.save(eventData);
+
+        // entrant data
+        List<RouteEntrantResult> routeEntrants = new ArrayList<>();
+
+        for (EventDataEntity racer : eventDataDao.getRacers(eventSessionId)) {
+            RouteEntrantResult routeEntrantResult = new RouteEntrantResult();
+            routeEntrantResult.setBestLapDurationInMilliseconds(racer.getBestLapTimeInMS());
+            routeEntrantResult.setEventSessionId(racer.getEventDurationInMS());
+            routeEntrantResult.setEventSessionId(eventSessionId);
+            routeEntrantResult.setFinishReason(racer.getFinishReason());
+            routeEntrantResult.setPersonaId(racer.getPersonaId());
+            routeEntrantResult.setRanking(racer.getRank());
+            routeEntrantResult.setTopSpeed(racer.getTopSpeed());
+
+            routeEntrants.add(routeEntrantResult);
+
+            if (!racer.getPersonaId().equals(persona.getId())) {
+                IXmppSender xmppSender = XmppFactory.getXmppSenderInstance(Session.getXmppServerType());
+                xmppSender.send(routeEntrantResultResponse, racer.getPersonaId());
+
+                if (routeIsFirstPlace) {
+                    XMPP_EventTimingOutType eventTimingOut = new XMPP_EventTimingOutType();
+                    eventTimingOut.setEventSessionId(eventSessionId);
+                    XMPP_ResponseTypeEventTimingOut eventTimingOutResponse = new XMPP_ResponseTypeEventTimingOut();
+                    eventTimingOutResponse.setEventTimingOut(eventTimingOut);
+
+                    xmppSender.send(eventTimingOutResponse, racer.getPersonaId());
+                }
+            }
+        }
+
+        result.setEntrants(routeEntrants);
+
+        if (arbitrationPacket.getRank() == 1) {
+            // first place, we consider this a win.
+            EventDefinitionEntity eventDefinitionEntity = eventData.getEventDefinition();
+            String achievementId = null;
+            String carClass;
+            
+            switch ((carClass = CarClasses.getCarClassFromHash(eventDefinitionEntity.getCarClassHash()))) {
+                case "E":
+                case "D":
+                case "C":
+                case "B":
+                case "A":
+                case "S":
+                    achievementId = "achievement_ACH_WIN_RACES_" + carClass + "CLASS";
+                    break;
+                default:
+                    break;
+            }
+
+//            switch (CarClass.byHash(eventDefinitionEntity.getCarClassHash())) {
+//                case A_CLASS: {
+//                    achievementId = "achievement_ACH_WIN_RACES_ACLASS";
+//                    break;
+//                }
+//                case B_CLASS: {
+//                    achievementId = "achievement_ACH_WIN_RACES_BCLASS";
+//                    break;
+//                }
+//                case C_CLASS: {
+//                    achievementId = "achievement_ACH_WIN_RACES_CCLASS";
+//                    break;
+//                }
+//                case D_CLASS: {
+//                    achievementId = "achievement_ACH_WIN_RACES_DCLASS";
+//                    break;
+//                }
+//                case E_CLASS: {
+//                    achievementId = "achievement_ACH_WIN_RACES_ECLASS";
+//                    break;
+//                }
+//                case S_CLASS: {
+//                    achievementId = "achievement_ACH_WIN_RACES_SCLASS";
+//                    break;
+//                }
+//                default:
+//                    break;
+//            }
+
+            if (achievementId != null) {
+                personaAchievementDao.update(
+                        persona,
+                        achievementDao.findByIdentifier(achievementId),
+                        1L,
+                        updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+                );
+            }
+        }
+
+        if (!eventData.getIsSinglePlayer()) {
+            // "World Racer" achievement, ONLY multiplayer sprints and circuits
+            personaAchievementDao.update(
+                    persona,
+                    achievementDao.findByIdentifier("achievement_ACH_PLAY_EVENTS"),
+                    1L,
+                    updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+            );
+        }
+
+        return result;
+    }
+
+    /**
+     * Creates a pursuit arbitration result.
+     *
+     * @param eventData         The event data entity.
+     * @param persona           The persona entity.
+     * @param accolades         The accolades instance (holds rewards)
+     * @param arbitrationPacket The pursuit arbitration packet sent by the client.
+     * @return The event result
+     */
+    private PursuitEventResult pursuitArbitration(
+            EventDataEntity eventData,
+            PersonaEntity persona,
+            Accolades accolades,
+            PursuitArbitrationPacket arbitrationPacket
+    )
+    {
+        Long eventSessionId = eventData.getEventSessionId();
+        boolean evaded = arbitrationPacket.getFinishReason() == FinishReason.Evaded.getCode();
+
+        if (evaded) {
+            personaAchievementDao.update(
+                    persona,
+                    achievementDao.findByIdentifier("achievement_ACH_PURSUIT"),
+                    1L,
+                    updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+            );
+        }
+
+        personaAchievementDao.update(
+                persona,
+                achievementDao.findByIdentifier("achievement_ACH_INCUR_COSTTOSTATE"),
+                (long) arbitrationPacket.getCostToState(),
+                updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+        );
+
+        PursuitEventResult pursuitEventResult = new PursuitEventResult();
+
+        pursuitEventResult.setDurability(100);
+        pursuitEventResult.setEventId(eventData.getEventId());
+        pursuitEventResult.setEventSessionId(eventSessionId);
+        pursuitEventResult.setExitPath(ExitPath.ExitToFreeroam);
+        pursuitEventResult.setInviteLifetimeInMilliseconds(0);
+        pursuitEventResult.setLobbyInviteId(0);
+        pursuitEventResult.setPersonaId(persona.getId());
+        pursuitEventResult.setHeat(arbitrationPacket.getHeat());
+
+        pursuitEventResult.setAccolades(accolades);
+
+        eventData.setCarId(arbitrationPacket.getCarId());
+        eventData.setEventDurationInMS(arbitrationPacket.getEventDurationInMilliseconds());
+        eventData.setFinishReason(arbitrationPacket.getFinishReason());
+        eventData.setRank(arbitrationPacket.getRank());
+        eventData.setTopSpeed(arbitrationPacket.getTopSpeed());
+
+        eventDataDao.save(eventData);
+
+        OwnedCarEntity defaultCar = personaBO.defaultcar(persona.getId());
+        defaultCar.setHeatLevel(Float.valueOf(arbitrationPacket.getHeat()).shortValue());
+
+        ownedCarDao.save(defaultCar);
+
+        return pursuitEventResult;
+    }
+
+    /**
+     * Creates a Team Escape arbitration result.
+     *
+     * @param eventData         The event data entity.
+     * @param persona           The persona entity.
+     * @param accolades         The accolades instance (holds rewards)
+     * @param arbitrationPacket The pursuit arbitration packet sent by the client.
+     * @return The event result
+     */
+    private TeamEscapeEventResult teamEscapeArbitration(
+            EventDataEntity eventData,
+            PersonaEntity persona,
+            Accolades accolades,
+            TeamEscapeArbitrationPacket arbitrationPacket
+    )
+    {
+        return null;
+    }
+
+    /**
+     * Creates a pursuit "busted" result. Pretty much the same as {@link EventBO#pursuitArbitration(EventDataEntity, PersonaEntity, Accolades, PursuitArbitrationPacket)}
+     * except for a few differences.
+     *
+     * @param eventData                The event data entity
+     * @param persona                  The persona entity
+     * @param eventSessionId           The event session ID
+     * @param pursuitArbitrationPacket The pursuit arbitration packet sent by the client
+     * @return The event result
+     */
+    public PursuitEventResult busted(EventDataEntity eventData, PersonaEntity persona, Long eventSessionId, PursuitArbitrationPacket pursuitArbitrationPacket)
+    {
+        Reward reward = new Reward();
+        reward.setRep(0);
+        reward.setTokens(0);
+
+        Accolades accolades = new Accolades();
+        accolades.setHasLeveledUp(false);
+        accolades.setFinalRewards(reward);
+        accolades.setOriginalRewards(reward);
+        accolades.setRewardInfo(new ArrayList<>());
+
+        PursuitEventResult pursuitEventResult = new PursuitEventResult();
+
+        pursuitEventResult.setDurability(100);
+        pursuitEventResult.setEventId(eventData.getEventDefinition().getId());
+        pursuitEventResult.setEventSessionId(eventSessionId);
+        pursuitEventResult.setExitPath(ExitPath.ExitToFreeroam);
+        pursuitEventResult.setInviteLifetimeInMilliseconds(0);
+        pursuitEventResult.setLobbyInviteId(0);
+        pursuitEventResult.setPersonaId(persona.getId());
+        pursuitEventResult.setHeat(pursuitArbitrationPacket.getHeat());
+        pursuitEventResult.setAccolades(accolades);
+
+        OwnedCarEntity defaultCar = personaBO.defaultcar(persona.getId());
+
+        defaultCar.setHeatLevel(Float.valueOf(pursuitArbitrationPacket.getHeat()).shortValue());
+
+        ownedCarDao.save(defaultCar);
+
+        // Cops/cost
+        eventData.setCopsDeployed(pursuitArbitrationPacket.getCopsDeployed());
+        eventData.setCopsDisabled(pursuitArbitrationPacket.getCopsDisabled());
+        eventData.setCopsRammed(pursuitArbitrationPacket.getCopsRammed());
+        eventData.setCostToState(pursuitArbitrationPacket.getCostToState());
+        eventData.setInfractions(pursuitArbitrationPacket.getInfractions());
+
+        // dodged
+        eventData.setRoadBlocksDodged(pursuitArbitrationPacket.getRoadBlocksDodged());
+        eventData.setSpikeStripsDodged(pursuitArbitrationPacket.getSpikeStripsDodged());
+
+        eventData.setIsSinglePlayer(true);
+        eventData.setTopSpeed(pursuitArbitrationPacket.getTopSpeed());
+        eventData.setCarId(pursuitArbitrationPacket.getCarId());
+        eventData.setEventDurationInMS(pursuitArbitrationPacket.getEventDurationInMilliseconds());
+        eventData.setEventModeId(eventData.getEventDefinition().getEventModeId());
+
+        eventDataDao.save(eventData);
+
+        return pursuitEventResult;
+    }
+
+
+    /**
+     * Generate accolades for an event data entity, based on its associated event's mode.
+     *
+     * @param eventData The event data entity.
+     * @param mode      The mode of the event data's event.
+     * @return The accolades.
+     * <p>
+     * TODO: Amplifiers?
+     */
+    private Accolades createAccolades(EventDataEntity eventData, EventMode mode, AbstractArbitrationPacket arbitrationPacket)
+    {
+        Accolades accolades = new Accolades();
+
+        if (!finishedEvent(arbitrationPacket))
+            return accolades;
+        Reward baseReward = new Reward();
+        baseReward.setRep(0);
+        baseReward.setTokens(0);
+
+        PersonaEntity persona = personaDao.findById(eventData.getPersonaId());
+
+        EventDefinitionEntity eventDefinition = eventData.getEventDefinition();
+        Pair<Reward, List<RewardPart>> rewardPartsPair = arbitrationPacket.calculateRewardParts(eventDefinition, baseReward);
+
+        baseReward.setRep(rewardPartsPair.getKey().getRep());
+        baseReward.setTokens(rewardPartsPair.getKey().getTokens());
+
+        accolades.setFinalRewards(new Reward()
+        {
+            {
+                setRep(baseReward.getRep());
+                setTokens(baseReward.getTokens());
+            }
+        });
+
+        accolades.setHasLeveledUp(false);
+        accolades.setLuckyDrawInfo(createDropForMode(eventData, mode, arbitrationPacket));
+        accolades.setOriginalRewards(arbitrationPacket.calculateBaseReward(eventDefinition));
+        accolades.setRewardInfo(rewardPartsPair.getValue());
+
+        persona.setCash(persona.getCash() + baseReward.getTokens());
+        personaDao.save(persona);
+
+        if (baseReward.getTokens() > 0) {
+            // giving a negative amount would basically travel back in progress. we don't want that.
+            personaAchievementDao.update(
+                    persona,
+                    achievementDao.findByIdentifier("achievement_ACH_EARN_CASH_EVENT"),
+                    (long) baseReward.getTokens(),
+                    updateInfo -> AchievementQueue.get(persona.getId()).add(updateInfo)
+            );
+        }
+
+        return accolades;
+
+//        Reward currencyReward = new Reward();
+//        List<RewardPart> rewardParts = new ArrayList<>();
+//
+//        int repBase = 2000;
+//        int tokenBase = 5000;
+//
+//        tokenBase += 100000;
+//        tokenBase += 10000000;
+//
+//        repBase += 10000000;
+//        repBase += 10000000;
+//
+//        // Reward generation
+//        currencyReward.setRep(repBase);
+//        currencyReward.setTokens(tokenBase);
+//
+//        RewardPart tokenAmplifier = new RewardPart();
+//        tokenAmplifier.setRewardCategory(RewardCategory.Amplifier);
+//        tokenAmplifier.setRewardType(RewardType.TokenAmplifier);
+//        tokenAmplifier.setTokenPart(100000);
+//
+//        RewardPart repAmplifier = new RewardPart();
+//        repAmplifier.setRewardCategory(RewardCategory.Amplifier);
+//        repAmplifier.setRewardType(RewardType.RepAmplifier);
+//        repAmplifier.setRepPart(10000000);
+//
+//        RewardPart dankBonus = new RewardPart();
+//        dankBonus.setRewardCategory(RewardCategory.Bonus);
+//        dankBonus.setRewardType(RewardType.None);
+//        dankBonus.setRepPart(10000000);
+//        dankBonus.setTokenPart(10000000);
+//
+//        rewardParts.addAll(Arrays.asList(tokenAmplifier, repAmplifier, dankBonus));
+//
+//        // Finish
+//        accolades.setHasLeveledUp(false);
+//        accolades.setFinalRewards(currencyReward);
+//        accolades.setOriginalRewards(currencyReward);
+//        accolades.setRewardInfo(rewardParts);
+//        accolades.setLuckyDrawInfo(createDropForMode(eventData, mode, arbitrationPacket));
+//
+//        return accolades;
+    }
+
+    /**
+     * Generate Lucky Draw data for an event data entity, based on its associated event's mode.
+     *
+     * @param eventData The event data entity.
+     * @param mode      The mode of the event data's event.
+     * @return The Lucky Draw info.
+     */
+    private LuckyDrawInfo createDropForMode(EventDataEntity eventData, EventMode mode, AbstractArbitrationPacket arbitrationPacket)
+    {
+        LuckyDrawInfo luckyDrawInfo = new LuckyDrawInfo();
+        luckyDrawInfo.setCardDeck(mode == EventMode.Pursuit_SP ? CardDecks.Silver.getCardDeckType() : CardDecks.forRank(arbitrationPacket.getRank()));
+
+        LuckyDrawItem luckyDrawItem = new LuckyDrawItem();
+
+        switch (mode) {
+            case Sprint:
+            case Circuit:
+            case Pursuit_SP:
+            case Pursuit_MP:
+            case Drag:
+                luckyDrawItem.setDescription("DANK MEME");
+                luckyDrawItem.setHash(-611661916L);
+                luckyDrawItem.setIcon("prod_powerup_stack_evade");
+                luckyDrawItem.setRemainingUseCount(0);
+                luckyDrawItem.setResellPrice(0);
+                luckyDrawItem.setVirtualItem("emergencyevade");
+                luckyDrawItem.setVirtualItemType("POWERUP");
+                luckyDrawItem.setWasSold(false);
+                break;
+            default:
+                break;
+        }
+
+        luckyDrawInfo.setLuckyDrawItem(luckyDrawItem);
+
+        System.out.println("luckyDrawInfo = " + luckyDrawInfo);
+        System.out.println("luckyDrawItem = " + luckyDrawItem);
+
+        return luckyDrawInfo;
+    }
+
+    /**
+     * Determine if the player finished an event.
+     */
+    private boolean finishedEvent(AbstractArbitrationPacket arbitrationPacket)
+    {
+        FinishReason finishReason = FinishReason.fromCode(arbitrationPacket.getFinishReason());
+        switch (finishReason) {
+            case Aborted:
+            case DidNotFinish:
+            case FalseStart:
+            case KnockedOut:
+            case TimedOut:
+            case TimeLimitExpired:
+            case Totalled:
+            case Unknown:
+                return false;
+        }
+
+        return true;
+    }
 }

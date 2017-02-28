@@ -10,6 +10,8 @@ public interface IPersonaDao extends ISoapboxDao {
 	public PersonaEntity findById(Long id);
 
 	public boolean existsByName(String name);
+	
+	List<PersonaEntity> getAll();
 
 	public PersonaEntity save(PersonaEntity entity);
 

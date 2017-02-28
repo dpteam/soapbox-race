@@ -1,6 +1,7 @@
 package br.com.soapboxrace.dao.factory;
 
 import br.com.soapboxrace.config.Config;
+import br.com.soapboxrace.dao.db.*;
 
 public class DaoFactory {
 
@@ -109,5 +110,36 @@ public class DaoFactory {
 		}
 		return null;
 	}
-
+	
+	public static IAchievementDao getAchievementDao() {
+		return new AchievementDao();
+	}
+	
+	public static IAchievementRankDao getAchievementRankDao() {
+		return new AchievementRankDao();
+	}
+	
+	public static IBadgeDefinitionDao getBadgeDefinitionDao() {
+		return new BadgeDefinitionDao();
+	}
+	
+	public static IPersonaAchievementDao getPersonaAchievementDao() {
+		return new PersonaAchievementDao();
+	}
+	
+	public static IPersonaAchievementRankDao getPersonaAchievementRankDao() {
+		return new PersonaAchievementRankDao();
+	}
+	
+	public static IAchievementRewardDao getAchievementRewardDao() {
+		return new AchievementRewardDao();
+	}
+	
+	public static IPersonaInventoryDao getPersonaInventoryDao() {
+		return new PersonaInventoryDao();
+	}
+	
+	public static IPersonaInventoryItemDao getPersonaInventoryItemDao() {
+		return new PersonaInventoryItemDao();
+	}
 }

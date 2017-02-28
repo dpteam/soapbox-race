@@ -47,7 +47,7 @@ public class Config {
 			dbDriver = prop.getProperty("dbDriver");
 			saveType = SaveType.valueOf(prop.getProperty("saveType"));
 		} catch (Exception e) {
-			System.err.println(e);
+			e.printStackTrace();
 		}
 	}
 
@@ -94,5 +94,4 @@ public class Config {
 	public SaveType getSaveType() {
 		return saveType;
 	}
-
 }

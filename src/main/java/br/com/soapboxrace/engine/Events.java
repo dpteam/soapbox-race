@@ -2,7 +2,10 @@ package br.com.soapboxrace.engine;
 
 import br.com.soapboxrace.bo.EventsBO;
 import br.com.soapboxrace.jaxb.EventsPacketType;
+import br.com.soapboxrace.jaxb.TreasureHuntEventSessionType;
 import br.com.soapboxrace.jaxb.util.MarshalXML;
+
+import java.util.Random;
 
 public class Events extends Router {
 
@@ -16,7 +19,24 @@ public class Events extends Router {
 	}
 
 	public String gettreasurehunteventsession() {
-		return "<TreasureHuntEventSession/>";
+		TreasureHuntEventSessionType huntSession = new TreasureHuntEventSessionType();
+		huntSession.setCoinsCollected(0);
+		huntSession.setNumCoins(2);
+		huntSession.setSeed(new Random().nextInt());
+		huntSession.setStreak(730);
+		huntSession.setStreakBroken(false);
+		
+		return MarshalXML.marshal(huntSession);
+	}
+	
+	public String notifycoincollected() {
+		Long coins = Long.parseLong(getParam("coins"));
+		
+		if (coins == 3) {
+			
+		}
+		
+		return "";
 	}
 
 	public String instancedaccolades() {

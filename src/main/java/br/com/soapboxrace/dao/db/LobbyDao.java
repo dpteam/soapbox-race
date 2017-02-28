@@ -37,6 +37,21 @@ public class LobbyDao extends SoapboxDao implements ILobbyDao {
 		return lobbys;
 	}
 
+	@Override
+	public List<LobbyEntity> findByStarted(Date dateNow, Date datePast)
+	{
+		EntityManager manager = getManager();
+		TypedQuery<LobbyEntity> query = manager.createQuery(
+				"SELECT obj FROM LobbyEntity obj WHERE obj.lobbyDateTimeStart between :dateTime1 and :dateTime2", LobbyEntity.class);
+		query.setParameter("dateTime1", datePast);
+		query.setParameter("dateTime2", dateNow);
+		List<LobbyEntity> lobbys = query.getResultList();
+		for (LobbyEntity lobbyEntity : lobbys) {
+			Hibernate.initialize(lobbyEntity.getEntrants());
+		}
+		return lobbys;
+	}
+
 	public LobbyEntity save(LobbyEntity entity) {
 		entity = (LobbyEntity) super.save(entity);
 		return entity;

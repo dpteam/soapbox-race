@@ -53,6 +53,7 @@ public abstract class SoapboxDao implements ISoapboxDao {
 		EntityTransaction tx = null;
 		try {
 			EntityManager manager = ConnectionDB.getManager();
+			manager.clear();
 			tx = manager.getTransaction();
 			tx.begin();
 			manager.persist(entity);
@@ -70,6 +71,7 @@ public abstract class SoapboxDao implements ISoapboxDao {
 		Object merge = null;
 		try {
 			EntityManager manager = ConnectionDB.getManager();
+			manager.clear();
 			tx = manager.getTransaction();
 			tx.begin();
 			merge = manager.merge(entity);
@@ -87,6 +89,7 @@ public abstract class SoapboxDao implements ISoapboxDao {
 		EntityTransaction tx = null;
 		try {
 			EntityManager manager = ConnectionDB.getManager();
+			manager.clear();
 			tx = manager.getTransaction();
 			tx.begin();
 			manager.remove(entity);

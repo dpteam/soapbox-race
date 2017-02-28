@@ -11,4 +11,7 @@ public interface IEventDefinitionDao extends ISoapboxDao {
 
 	public List<EventDefinitionEntity> getAll();
 
+	public EventDefinitionEntity findByHash(Long hash);
+	
+	public EventDefinitionEntity findByTrack(String track);
 }

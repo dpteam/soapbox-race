@@ -1,6 +1,7 @@
 package br.com.soapboxrace.dao.db;
 
 import java.util.List;
+import java.util.Random;
 
 import br.com.soapboxrace.dao.factory.IProductDao;
 import br.com.soapboxrace.db.SoapboxDao;
@@ -28,5 +29,25 @@ public class ProductDao extends SoapboxDao implements IProductDao {
 		carSlotProductData.setProductId(productId);
 		carSlotProductData = (ProductEntity) super.find(carSlotProductData).get(0);
 		return carSlotProductData;
+	}
+
+	@Override
+	public ProductEntity findByHash(Long hash)
+	{
+		ProductEntity carSlotProductData = new ProductEntity();
+		carSlotProductData.setHash(hash);
+		carSlotProductData = (ProductEntity) super.find(carSlotProductData).get(0);
+		return carSlotProductData;
+	}
+
+	@Override
+	public ProductEntity selectRandom(String productType)
+	{
+		ProductEntity stub = new ProductEntity();
+		stub.setProductType(productType);
+		
+		List<ProductEntity> results = (List<ProductEntity>) (List<?>) super.find(stub);
+		
+		return results.get(new Random().nextInt(results.size()));
 	}
 }
