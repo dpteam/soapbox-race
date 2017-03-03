@@ -15,6 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Achievement utilities
+ * 
+ * @author leorblx
+ */
 public class AchievementUtils
 {
     public static void broadcastProgress(PersonaEntity persona, PersonaAchievementEntity personaAchievementEntity, List<PersonaAchievementRankEntity> ranks, Integer score)

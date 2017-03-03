@@ -1,6 +1,8 @@
 package br.com.soapboxrace.engine;
 
 import br.com.soapboxrace.bo.UserBO;
+import br.com.soapboxrace.definition.EngineExceptionCode;
+import br.com.soapboxrace.definition.PresetExceptions;
 import br.com.soapboxrace.definition.ServerExceptions.EngineException;
 import br.com.soapboxrace.jaxb.UserInfoType;
 import br.com.soapboxrace.jaxb.util.MarshalXML;

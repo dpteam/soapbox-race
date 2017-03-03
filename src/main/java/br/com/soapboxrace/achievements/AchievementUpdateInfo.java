@@ -6,6 +6,9 @@ import br.com.soapboxrace.jpa.PersonaAchievementRankEntity;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author leorblx
+ */
 public class AchievementUpdateInfo
 {
     private PersonaAchievementEntity personaAchievement;

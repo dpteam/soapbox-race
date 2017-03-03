@@ -1,9 +1,9 @@
 package br.com.soapboxrace.achievements;
 
-import com.google.gson.JsonObject;
-
 /**
  * An item for a reward.
+ * 
+ * @author leorblx
  */
 public class RewardItem
 {

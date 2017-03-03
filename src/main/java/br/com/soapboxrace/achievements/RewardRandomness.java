@@ -1,5 +1,8 @@
 package br.com.soapboxrace.achievements;
 
+/**
+ * @author leorblx
+ */
 public class RewardRandomness
 {
     private float chance;

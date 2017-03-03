@@ -4,6 +4,8 @@ import java.util.List;
 
 /**
  * Holds rewards for a single achievement.
+ * 
+ * @author leorblx
  */
 public class AchievementReward
 {

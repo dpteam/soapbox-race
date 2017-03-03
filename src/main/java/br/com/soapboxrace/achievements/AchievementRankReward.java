@@ -6,6 +6,8 @@ import java.util.List;
 
 /**
  * Holds a reward for a specific rank.
+ * 
+ * @author leorblx
  */
 public class AchievementRankReward
 {

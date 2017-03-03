@@ -303,41 +303,53 @@ CREATE TABLE SOAPBOX.BADGEDEFINITION (
   ENGINE = INNODB;
 
 CREATE TABLE SOAPBOX.ACHIEVEMENTREWARD (
-  id          BIGINT NOT NULL AUTO_INCREMENT,
-  achievementId  BIGINT NOT NULL,
-  rewards LONGTEXT,
+  id            BIGINT NOT NULL AUTO_INCREMENT,
+  achievementId BIGINT NOT NULL,
+  rewards       LONGTEXT,
 
   PRIMARY KEY (id)
 )
   ENGINE = INNODB;
 
 CREATE TABLE SOAPBOX.PERSONAINVENTORY (
-  id          BIGINT NOT NULL AUTO_INCREMENT,
-  personaId  BIGINT NOT NULL,
-  performancePartsCapacity INT DEFAULT 150,
-  performancePartsUsedSlotCount INT DEFAULT 0,
-  skillModPartsCapacity INT DEFAULT 200,
-  skillModPartsUsedSlotCount INT DEFAULT 0,
-  visualPartsCapacity INT DEFAULT 300,
-  visualPartsUsedSlotCount INT DEFAULT 0,
+  id                            BIGINT NOT NULL AUTO_INCREMENT,
+  personaId                     BIGINT NOT NULL,
+  performancePartsCapacity      INT             DEFAULT 150,
+  performancePartsUsedSlotCount INT             DEFAULT 0,
+  skillModPartsCapacity         INT             DEFAULT 200,
+  skillModPartsUsedSlotCount    INT             DEFAULT 0,
+  visualPartsCapacity           INT             DEFAULT 300,
+  visualPartsUsedSlotCount      INT             DEFAULT 0,
 
   PRIMARY KEY (id)
 )
   ENGINE = INNODB;
 CREATE TABLE SOAPBOX.PERSONAINVENTORYITEM (
-  id          BIGINT NOT NULL AUTO_INCREMENT,
-  inventoryId BIGINT NOT NULL,
-  personaId BIGINT NOT NULL,
-  
-  entitlementTag VARCHAR(400),
-  expirationDate VARCHAR(250) NULL,
-  hash BIGINT NOT NULL,
-  productId VARCHAR(250),
+  id                BIGINT       NOT NULL AUTO_INCREMENT,
+  inventoryId       BIGINT       NOT NULL,
+  personaId         BIGINT       NOT NULL,
+
+  entitlementTag    VARCHAR(400),
+  expirationDate    VARCHAR(250) NULL,
+  hash              BIGINT       NOT NULL,
+  productId         VARCHAR(250),
   remainingUseCount INT,
-  resalePrice FLOAT,
-  status VARCHAR(250),
-  stringHash VARCHAR(250),
-  virtualItemType VARCHAR(250),
+  resalePrice       FLOAT,
+  status            VARCHAR(250),
+  stringHash        VARCHAR(250),
+  virtualItemType   VARCHAR(250),
+
+  PRIMARY KEY (id)
+)
+  ENGINE = INNODB;
+
+CREATE TABLE `SOAPBOX`.TREASUREHUNTSESSION (
+  id        BIGINT NOT NULL AUTO_INCREMENT,
+  personaId BIGINT NOT NULL,
+  coinsCollected BIGINT NOT NULL,
+  seed BIGINT NOT NULL,
+  isStreakBroken BIT NOT NULL,
+  streak BIGINT NOT NULL,
 
   PRIMARY KEY (id)
 )

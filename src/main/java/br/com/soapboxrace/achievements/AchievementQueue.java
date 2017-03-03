@@ -5,6 +5,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+/**
+ * Holds persona achievement queues.
+ * 
+ * @author leorblx
+ */
 public class AchievementQueue
 {
     private static final ConcurrentMap<Long, PersonaAchievementQueue> queueMap = new ConcurrentHashMap<>();
@@ -14,32 +19,16 @@ public class AchievementQueue
         return queueMap;
     }
 
+    /**
+     * Gets an achievement queue by persona ID.
+     * 
+     * @param personaId The persona ID to get the queue for.
+     * @return The achievement queue.
+     */
     public static PersonaAchievementQueue get(Long personaId)
     {
         return queueMap.computeIfAbsent(personaId, PersonaAchievementQueue::new);
     }
-
-    //    private static final ConcurrentMap<Long, List<AchievementUpdateInfo>> queueMap = new ConcurrentHashMap<>();
-//
-//    public static ConcurrentMap<Long, List<AchievementUpdateInfo>> getQueueMap()
-//    {
-//        return queueMap;
-//    }
-//
-//    public static List<AchievementUpdateInfo> get(Long personaId)
-//    {
-//        return queueMap.getOrDefault(personaId, Lists.newArrayList());
-//    }
-//
-//    public static void add(Long personaId, AchievementUpdateInfo updateInfo)
-//    {
-//        queueMap.computeIfAbsent(personaId, pid -> Lists.newArrayList()).add(updateInfo);
-//    }
-//
-//    public static void remove(Long personaId)
-//    {
-//        queueMap.remove(personaId);
-//    }
 
     /**
      * A persona-specific achievement queue.

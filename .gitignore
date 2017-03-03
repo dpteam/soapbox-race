@@ -26,6 +26,7 @@ www/
 /.idea/
 
 src/main/java/br/com/soapboxrace/tools/
+db/old-*.sql
 soapbox-race.iml
 BACKUP/
 

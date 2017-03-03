@@ -81,7 +81,10 @@ public class HttpSrv extends GzipHandler {
 			e.printStackTrace();
 			System.out.println("class not found");
 		} catch (InvocationTargetException e) {
-			e.printStackTrace();
+			if (!(e.getCause() instanceof ServerExceptions.EngineException && ((ServerExceptions.EngineException) e.getCause()).getCode() != null)) {
+				e.printStackTrace();
+			}
+			
 			EngineExceptionTrans error = new EngineExceptionTrans();
 			error.setDescription("");
 			error.setInnerException("");
